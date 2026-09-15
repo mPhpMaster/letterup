@@ -1,0 +1,126 @@
+{
+  "app": {
+    "title": "Human, Animal, Plant, Object",
+    "tagline": "One letter. Every category. Quickest wits win."
+  },
+  "common": {
+    "host": "Host",
+    "you": "you",
+    "away": "Away",
+    "ready": "Ready",
+    "points_one": "{count} pt",
+    "points_other": "{count} pts",
+    "retry": "Try again",
+    "dismiss": "Dismiss",
+    "confirmTap": "Tap again to confirm"
+  },
+  "boot": {
+    "connecting": "Connecting to Discord…",
+    "authorizing": "Signing you in…",
+    "joining": "Joining the lobby…",
+    "failed": "Couldn't start the game",
+    "hint": "Check the Activity URL mappings and environment variables, then relaunch the Activity."
+  },
+  "guest": {
+    "title": "Local test mode",
+    "subtitle": "You're outside Discord. Pick a name and a room code, then open more tabs with the same room to play against yourself.",
+    "name": "Your name",
+    "room": "Room code",
+    "join": "Join room",
+    "joining": "Joining…"
+  },
+  "header": {
+    "round": "Round {current}/{total}",
+    "endGame": "End game",
+    "language": "Language"
+  },
+  "lobby": {
+    "title": "Lobby",
+    "players_one": "{count} player",
+    "players_other": "{count} players",
+    "invite": "Anyone in the voice channel can join by launching the Activity.",
+    "settings": "Game settings",
+    "hostOnly": "Only the host can change settings.",
+    "roundDuration": "Round duration",
+    "secondsShort": "{value}s",
+    "rounds": "Number of rounds",
+    "custom": "Custom",
+    "letters": "Letters",
+    "lettersEn": "English A–Z",
+    "lettersAr": "Arabic أ–ي",
+    "excludeHard": "Skip hard letters",
+    "excludeHardHint": "Leaves out {letters}",
+    "categories": "Categories",
+    "selected": "{count} of {total} selected",
+    "selectAll": "Select all",
+    "defaults": "Defaults",
+    "needCategory": "Keep at least one category selected.",
+    "start": "Start game",
+    "readyCount": "{ready}/{total} ready",
+    "imReady": "I'm ready",
+    "readyOn": "Ready! Tap to cancel",
+    "waitingHost": "Waiting for {name} to start the game…"
+  },
+  "categories": {
+    "human": "Human",
+    "animal": "Animal",
+    "plant": "Plant",
+    "object": "Object",
+    "country": "Country",
+    "city": "City",
+    "food": "Food / Dish",
+    "brand": "Brand",
+    "job": "Job",
+    "movie": "Movie / Show",
+    "color": "Color",
+    "sport": "Sport"
+  },
+  "play": {
+    "getReady": "Get ready!",
+    "letterIs": "This round's letter",
+    "placeholder": "Starts with {letter}…",
+    "wrongLetter": "Doesn't start with {letter}",
+    "done": "Done",
+    "submitted": "Answers locked in!",
+    "progress": "{done}/{total} players done",
+    "timeUp": "Time's up!",
+    "collecting": "Collecting everyone's answers…",
+    "endNow": "End round now",
+    "timeLeft": "{seconds} seconds left"
+  },
+  "vote": {
+    "title": "Vote on the answers",
+    "help": "Give 👍 or 👎 to other players' answers. An answer is thrown out if more players reject it than accept it (its author counts as one 👍).",
+    "rules": "Unique valid answer: 10 · Shared answer: 5 · Invalid or blank: 0",
+    "hostHelp": "As host you can overrule any answer with ✓ or ✗.",
+    "noAnswer": "No answer",
+    "wrongLetter": "Wrong letter",
+    "duplicate": "Shared",
+    "hostRuled": "Host ruling",
+    "approve": "Accept",
+    "reject": "Reject",
+    "forceValid": "Rule valid",
+    "forceInvalid": "Rule invalid",
+    "votes": "Votes",
+    "hostControls": "Host ruling",
+    "confirm": "Confirm scores",
+    "waitingHost": "Waiting for {name} to confirm the scores…"
+  },
+  "results": {
+    "title": "Round {number} results",
+    "thisRound": "This round",
+    "total": "Total",
+    "showAnswers": "Show all answers",
+    "next": "Next round",
+    "final": "See final results",
+    "waitingHost": "Waiting for {name} to continue…"
+  },
+  "final": {
+    "title": "Final leaderboard",
+    "winner": "{name} wins!",
+    "tie": "It's a tie between {names}!",
+    "playAgain": "Play again",
+    "waitingHost": "Waiting for {name} to start a new game…",
+    "listSeparator": ", "
+  }
+}
