@@ -137,6 +137,11 @@ async function requireMember(user: SessionUser, body: Body): Promise<Member> {
   const core = await loadCore(uuid(body.gameId, "gameId"));
   const me = core.players.find((p) => p.user_id === user.userId);
   if (!me) throw new HttpError(403, "You are not in this game");
+  // Any action is proof of life, not only the periodic `state` heartbeat.
+  const seenAt = new Date().toISOString();
+  const { error } = await admin().from("players").update({ last_seen_at: seenAt }).eq("id", me.id);
+  if (error) throw new Error(`heartbeat: ${error.message}`);
+  me.last_seen_at = seenAt;
   return { ...core, me };
 }
 
