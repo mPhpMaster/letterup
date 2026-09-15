@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&display=block" rel="stylesheet">
+<style>
+  /* Discord Cover Art: 1024x576. Designed on a 1920x1080 stage and scaled down. */
+  html, body { margin: 0; width: 1024px; height: 576px; overflow: hidden; background: #13141c; }
+  .stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform: scale(0.533334); transform-origin: 0 0;
+    font-family: Rubik, sans-serif; color: #f3f4fa;
+    background:
+      radial-gradient(900px 600px at 18% 30%, rgba(123, 92, 255, 0.5), transparent 60%),
+      radial-gradient(800px 500px at 90% 100%, rgba(255, 201, 61, 0.22), transparent 60%),
+      #13141c;
+    display: flex; align-items: center; gap: 110px; padding: 0 140px; box-sizing: border-box;
+  }
+  .tiles { position: relative; width: 560px; height: 560px; flex: none; }
+  .tile {
+    position: absolute; display: grid; place-items: center; border-radius: 22%;
+    font-weight: 900; line-height: 1;
+  }
+  .en {
+    left: 0; top: 20px; width: 380px; height: 380px; font-size: 270px;
+    background: linear-gradient(160deg, #ffd766, #ffc93d); color: #221a00; transform: rotate(-8deg);
+    box-shadow: 0 22px 0 #c99200, 0 50px 80px rgba(0, 0, 0, 0.55);
+  }
+  .ar {
+    left: 230px; top: 230px; width: 300px; height: 300px; font-size: 200px;
+    background: linear-gradient(160deg, #a08aff, #6843ff); color: #fff; transform: rotate(8deg);
+    box-shadow: 0 18px 0 #4a2bd0, 0 44px 70px rgba(0, 0, 0, 0.55);
+  }
+  .ar span { transform: translateY(-14px); }
+  h1 { margin: 0; font-size: 96px; font-weight: 900; letter-spacing: -2px; line-height: 1.02; }
+  h2 { margin: 18px 0 0; font-size: 84px; font-weight: 800; color: #ffc93d; direction: rtl; text-align: left; }
+  p { margin: 34px 0 0; font-size: 40px; font-weight: 500; color: #b8bdd6; }
+  .chips { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 44px; }
+  .chip {
+    padding: 12px 26px; border-radius: 999px; font-size: 32px; font-weight: 700;
+    background: #282b3b; border: 2px solid #353950;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="tiles">
+    <div class="tile en">A</div>
+    <div class="tile ar"><span>أ</span></div>
+  </div>
+  <div>
+    <h1>Human, Animal,<br>Plant, Object</h1>
+    <h2>إنسان، حيوان، نبات، جماد</h2>
+    <p>One letter. Every category. Quickest wits win.</p>
+    <div class="chips">
+      <span class="chip">🧑 Human</span><span class="chip">🦁 Animal</span>
+      <span class="chip">🌿 Plant</span><span class="chip">📦 Object</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

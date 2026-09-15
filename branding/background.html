@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@900&display=block" rel="stylesheet">
+<style>
+  /* Discord Activity Background: 1024x576, art clustered at the edges, centre left clear for UI. */
+  html, body { margin: 0; width: 1024px; height: 576px; overflow: hidden; background: #13141c; }
+  .stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    transform: scale(0.533334); transform-origin: 0 0; overflow: hidden;
+    background:
+      radial-gradient(700px 500px at 0% 0%, rgba(123, 92, 255, 0.45), transparent 70%),
+      radial-gradient(700px 500px at 100% 100%, rgba(255, 201, 61, 0.25), transparent 70%),
+      radial-gradient(600px 420px at 100% 0%, rgba(55, 217, 154, 0.16), transparent 70%),
+      radial-gradient(600px 420px at 0% 100%, rgba(255, 92, 116, 0.18), transparent 70%),
+      #13141c;
+    font-family: Rubik, sans-serif;
+  }
+  .t {
+    position: absolute; display: grid; place-items: center; border-radius: 22%;
+    font-weight: 900; line-height: 1; box-shadow: 0 18px 0 rgba(0, 0, 0, 0.35), 0 40px 70px rgba(0, 0, 0, 0.5);
+  }
+  .y { background: linear-gradient(160deg, #ffd766, #ffc93d); color: #221a00; }
+  .p { background: linear-gradient(160deg, #a08aff, #6843ff); color: #fff; }
+  .g { background: linear-gradient(160deg, #6ff0bd, #37d99a); color: #04291b; }
+  .r { background: linear-gradient(160deg, #ff8a9b, #ff5c74); color: #fff; }
+  .s { background: #282b3b; color: #9da3bd; border: 3px solid #353950; }
+  .ar { padding-bottom: 0.12em; box-sizing: border-box; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <!-- top-left cluster -->
+    <div class="t y" style="left:-40px;top:-30px;width:260px;height:260px;font-size:180px;transform:rotate(-12deg)">A</div>
+    <div class="t p ar" style="left:230px;top:60px;width:170px;height:170px;font-size:120px;transform:rotate(9deg)">ب</div>
+    <div class="t s" style="left:60px;top:280px;width:120px;height:120px;font-size:80px;transform:rotate(6deg)">K</div>
+    <!-- top-right cluster -->
+    <div class="t g" style="left:1650px;top:-20px;width:230px;height:230px;font-size:160px;transform:rotate(10deg)">M</div>
+    <div class="t s ar" style="left:1500px;top:120px;width:130px;height:130px;font-size:90px;transform:rotate(-8deg)">ن</div>
+    <div class="t r" style="left:1760px;top:270px;width:150px;height:150px;font-size:100px;transform:rotate(-14deg)">S</div>
+    <!-- bottom-left cluster -->
+    <div class="t r ar" style="left:-30px;top:820px;width:240px;height:240px;font-size:165px;transform:rotate(12deg)">ج</div>
+    <div class="t y" style="left:240px;top:900px;width:160px;height:160px;font-size:110px;transform:rotate(-7deg)">T</div>
+    <div class="t s" style="left:70px;top:660px;width:120px;height:120px;font-size:80px;transform:rotate(-10deg)">R</div>
+    <!-- bottom-right cluster -->
+    <div class="t p" style="left:1640px;top:800px;width:280px;height:280px;font-size:195px;transform:rotate(-9deg)">O</div>
+    <div class="t g ar" style="left:1470px;top:930px;width:150px;height:150px;font-size:100px;transform:rotate(11deg)">ح</div>
+    <div class="t s" style="left:1780px;top:660px;width:120px;height:120px;font-size:80px;transform:rotate(8deg)">P</div>
+  </div>
+</body>
+</html>
