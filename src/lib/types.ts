@@ -45,6 +45,8 @@ export interface RoundView {
   letterLocale: LetterLocale;
   categories: string[];
   status: RoundStatus;
+  /** Which category voting is on. Everyone reviews the same one at the same time. */
+  voteCategoryIndex: number;
   startedAt: number;
   endsAt: number;
   submittedPlayerIds: string[];

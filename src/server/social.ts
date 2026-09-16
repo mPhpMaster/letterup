@@ -53,6 +53,7 @@ async function joinableRooms(userIds: string[]): Promise<Map<string, string | nu
     .select("user_id, last_seen_at, games!inner(room_code, status)")
     .in("user_id", userIds)
     .is("kicked_at", null)
+    .is("left_at", null)
     .neq("games.status", "finished")
     .returns<{ user_id: string; last_seen_at: string; games: { room_code: string | null; status: string } }[]>();
   if (error) throw new Error(`rooms: ${error.message}`);
@@ -229,6 +230,7 @@ export async function inviteToRoom(viewer: SessionUser, targetId: string, gameId
     .eq("game_id", gameId)
     .eq("user_id", targetId)
     .is("kicked_at", null)
+    .is("left_at", null)
     .maybeSingle();
   if (already.error) throw new Error(`invite: ${already.error.message}`);
   if (already.data) throw new HttpError(409, "They are already in this room");

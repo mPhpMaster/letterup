@@ -138,6 +138,9 @@
     "forceInvalid": "احكم بخطئها",
     "votes": "الأصوات",
     "hostControls": "حكم المضيف",
+    "progress": "الفئة {current} من {total}",
+    "waitingOthers": "بانتظار تصويت الجميع على هذه الفئة…",
+    "allReviewed": "تمت مراجعة كل الفئات.",
     "confirm": "اعتماد النقاط",
     "waitingHost": "بانتظار {name} لاعتماد النقاط…"
   },

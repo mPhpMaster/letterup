@@ -56,6 +56,7 @@ interface PlayerRow {
   joined_at: string;
   last_seen_at: string;
   kicked_at: string | null;
+  left_at: string | null;
 }
 interface RoundRow {
   id: string;
@@ -67,6 +68,7 @@ interface RoundRow {
   status: "playing" | "voting" | "scored";
   started_at: string;
   ends_at: string;
+  vote_category_index: number;
 }
 interface AnswerRow {
   id: string;
@@ -132,7 +134,7 @@ async function loadCore(gameId: string): Promise<Core> {
   const [game, settings, players] = await Promise.all([
     db.from("games").select("*").eq("id", gameId).maybeSingle<GameRow>(),
     db.from("settings").select("*").eq("game_id", gameId).maybeSingle<SettingsRow>(),
-    db.from("players").select("*").eq("game_id", gameId).is("kicked_at", null).order("joined_at").returns<PlayerRow[]>(),
+    db.from("players").select("*").eq("game_id", gameId).is("kicked_at", null).is("left_at", null).order("joined_at").returns<PlayerRow[]>(),
   ]);
   return {
     game: check(game, "game"),
@@ -258,6 +260,7 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
       letterLocale: r.letter_locale,
       categories: r.categories,
       status: r.status,
+      voteCategoryIndex: r.vote_category_index,
       startedAt: Date.parse(r.started_at),
       endsAt: Date.parse(r.ends_at),
       submittedPlayerIds: check(subs, "submissions").map((s) => s.player_id),
@@ -336,6 +339,10 @@ export const actions: Record<string, Action> = {
           username: user.username.slice(0, 64),
           avatar_url: user.avatarUrl,
           last_seen_at: new Date().toISOString(),
+          // Leaving stamps left_at and loadCore hides the row, so clear it on the way back
+          // in -- otherwise one leave locks you out of the instance for good. A host kick
+          // stamps kicked_at instead, and that one stays put: kicks are meant to stick.
+          left_at: null,
         },
         { onConflict: "game_id,user_id" },
       ),
@@ -390,7 +397,14 @@ export const actions: Record<string, Action> = {
     if (game.status === "finished") throw new HttpError(409, "That game has already finished");
 
     if (game.password_hash) {
-      const already = await db.from("players").select("id").eq("game_id", game.id).eq("user_id", user.userId).is("kicked_at", null).maybeSingle();
+      const already = await db
+        .from("players")
+        .select("id")
+        .eq("game_id", game.id)
+        .eq("user_id", user.userId)
+        .is("kicked_at", null)
+        .is("left_at", null)
+        .maybeSingle();
       if (already.error) throw new Error(`join: ${already.error.message}`);
       if (!already.data) {
         const supplied = typeof body.password === "string" ? body.password : "";
@@ -410,7 +424,7 @@ export const actions: Record<string, Action> = {
     const m = await requireMember(user, body);
     const { error } = await admin()
       .from("players")
-      .update({ kicked_at: new Date().toISOString() })
+      .update({ left_at: new Date().toISOString() })
       .eq("id", m.me.id);
     if (error) throw new Error(`leave: ${error.message}`);
     if (m.game.host_user_id === user.userId) {
@@ -459,7 +473,19 @@ export const actions: Record<string, Action> = {
     const now = Date.now();
     const hostChanged = await maybeMigrateHost(core, now);
     const ended = core.game.status === "playing" && (await endRoundIfNeeded(await currentRound(core.game), now));
-    if (hostChanged && !ended) await touch(gameId);
+    // Someone dropping out can be exactly what the current category was waiting on,
+    // and nobody else is voting to trigger it -- so the heartbeat checks too. Only
+    // bump the game version when the category actually moved, or every poll would
+    // wake all the other clients for nothing.
+    let movedOn = false;
+    if (core.game.status === "voting") {
+      const voting = await currentRound(core.game);
+      if (voting) {
+        const moved = await db.rpc("advance_vote_category", { p_round_id: voting.id });
+        movedOn = !moved.error && typeof moved.data === "number" && moved.data !== voting.vote_category_index;
+      }
+    }
+    if ((hostChanged || movedOn) && !ended) await touch(gameId);
     return buildState(user, gameId);
   },
 
@@ -633,6 +659,9 @@ export const actions: Record<string, Action> = {
             .from("votes")
             .upsert({ answer_id: answer.id, voter_player_id: m.me.id, approve }, { onConflict: "answer_id,voter_player_id" });
     if (res.error) throw new Error(`vote: ${res.error.message}`);
+    // This may have been the last vote the current category was waiting on.
+    const advanced = await db.rpc("advance_vote_category", { p_round_id: answer.round_id });
+    if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
     await touch(m.game.id);
     return buildState(user, m.game.id);
   },
@@ -718,7 +747,8 @@ async function addPlayer(gameId: string, user: SessionUser): Promise<void> {
         username: user.username.slice(0, 64),
         avatar_url: user.avatarUrl,
         last_seen_at: now,
-        kicked_at: null,
+        // Same rule as the Discord join: a leave is undone, a kick is not.
+        left_at: null,
       },
       { onConflict: "game_id,user_id" },
     ),

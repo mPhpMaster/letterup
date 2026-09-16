@@ -130,6 +130,9 @@
     "forceInvalid": "Rule invalid",
     "votes": "Votes",
     "hostControls": "Host ruling",
+    "progress": "Category {current} of {total}",
+    "waitingOthers": "Waiting for everyone to vote on this category…",
+    "allReviewed": "Every category reviewed.",
     "confirm": "Confirm Scores",
     "waitingHost": "Waiting for {name} to confirm the scores…"
   },

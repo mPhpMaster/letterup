@@ -56,9 +56,16 @@ export function AnswersBoard({ mode }: { mode: "vote" | "final" }) {
     (p) => round.answers.some((a) => a.playerId === p.id) || round.submittedPlayerIds.includes(p.id),
   );
 
+  // Voting walks the categories one at a time so the whole room is looking at the
+  // same list; the final board still shows the round in full.
+  // Once the index runs past the last category every vote is in, so the board opens
+  // back up in full for the host to look over before confirming the scores.
+  const reviewing = mode === "vote" && round.voteCategoryIndex < round.categories.length;
+  const shown = reviewing ? round.categories.slice(round.voteCategoryIndex, round.voteCategoryIndex + 1) : round.categories;
+
   return (
     <div className="flex flex-col gap-4">
-      {round.categories.map((category) => (
+      {shown.map((category) => (
         <section key={category} className="flex flex-col gap-2">
           <h3 className="flex items-center gap-1.5 text-[13px] font-bold">
             <Icon name={CATEGORY_ICON[category] ?? "cube"} size={15} />
