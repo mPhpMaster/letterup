@@ -3,7 +3,7 @@ import { admin } from "./supabase-admin";
 import { HttpError } from "./errors";
 import { assertNotBanned } from "./admin";
 import { hashPassword, verifyPassword } from "./passwords";
-import { CATEGORY_IDS } from "@/lib/categories";
+import { normalizeCategories } from "@/lib/categories";
 import { normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
 import { computeRoundScores } from "@/lib/scoring";
 import type { AnswerView, GameOrigin, GameState, GameStatus, PlayerView, RoundView, SessionUser } from "@/lib/types";
@@ -310,7 +310,7 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
     settings: {
       roundSeconds: settings.round_seconds,
       totalRounds: settings.total_rounds,
-      categories: settings.categories,
+      categories: normalizeCategories(settings.categories),
       letterLocale: settings.letter_locale,
       excludeHardLetters: settings.exclude_hard_letters,
     },
@@ -558,10 +558,10 @@ export const actions: Record<string, Action> = {
     }
     if (patch.categories !== undefined) {
       const list = patch.categories;
-      if (!Array.isArray(list) || list.some((c) => typeof c !== "string" || !CATEGORY_IDS.includes(c))) {
-        throw new HttpError(400, "Invalid categories");
-      }
-      const unique = CATEGORY_IDS.filter((id) => list.includes(id)); // canonical order, deduped
+      if (!Array.isArray(list) || list.some((c) => typeof c !== "string")) throw new HttpError(400, "Invalid categories");
+      // A client still showing a merged category (City) sends its old id: map it on.
+      if (list.some((c) => normalizeCategories([c]).length === 0)) throw new HttpError(400, "Invalid categories");
+      const unique = normalizeCategories(list); // canonical order, deduped
       if (unique.length === 0) throw new HttpError(400, "Select at least one category");
       update.categories = unique;
     }
