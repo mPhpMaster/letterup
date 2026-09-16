@@ -89,11 +89,15 @@ interface DiscordUser {
   avatar?: string | null;
 }
 
+/** Discord names can carry runs of exotic spaces; collapse them so lists stay readable. */
+export const cleanName = (name: string): string =>
+  name.replace(/[\s  -‍  　]+/g, " ").trim().slice(0, 64) || "Player";
+
 export function discordUserToSession(u: DiscordUser): SessionUser {
   const avatarUrl = u.avatar
     ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`
     : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(u.id) >> BigInt(22)) % BigInt(6))}.png`;
-  return { userId: u.id, username: u.global_name || u.username, avatarUrl, kind: "discord" };
+  return { userId: u.id, username: cleanName(u.global_name || u.username), avatarUrl, kind: "discord" };
 }
 
 /** Exchanges an OAuth2 code for the Discord profile behind it. */

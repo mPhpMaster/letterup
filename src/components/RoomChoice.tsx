@@ -20,6 +20,7 @@ export function RoomChoice({
   onOpenLeaderboard,
   onOpenSuggest,
   onOpenAdmin,
+  onSignOut,
   busy,
   error,
   initialCode = "",
@@ -34,6 +35,7 @@ export function RoomChoice({
   onOpenLeaderboard: () => void;
   onOpenSuggest: () => void;
   onOpenAdmin: () => void;
+  onSignOut: () => void;
   busy: boolean;
   error?: string | null;
   initialCode?: string;
@@ -137,6 +139,11 @@ export function RoomChoice({
             {t("suggest.open")}
           </button>
         </div>
+
+        <button type="button" className="self-center text-[12px] font-semibold text-muted hover:underline" onClick={onSignOut}>
+          <Icon name="signOut" size={13} className="me-1 inline" />
+          {t("room.signOut")}
+        </button>
       </main>
     </div>
   );

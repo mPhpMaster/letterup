@@ -161,6 +161,15 @@ export default function App() {
     };
   }, [profileId, token]);
 
+  /** The session cookie is HttpOnly, so signing out has to go through the server. */
+  const signOut = () => {
+    void postJson("/api/auth/logout", {})
+      .catch(() => {})
+      .finally(() => {
+        window.location.href = "/";
+      });
+  };
+
   const sendReport = async (userId: string, reason: string) => {
     try {
       await postJson("/api/social/report", { userId, reason }, token ?? undefined);
@@ -314,6 +323,7 @@ export default function App() {
           onOpenLeaderboard={() => setOverlay({ kind: "leaderboard" })}
           onOpenSuggest={() => setOverlay({ kind: "suggest" })}
           onOpenAdmin={() => setOverlay({ kind: "admin" })}
+          onSignOut={signOut}
           busy={busy}
           error={joinError}
           initialCode={roomFromUrl()}
