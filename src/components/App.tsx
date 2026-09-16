@@ -576,6 +576,12 @@ function GameScreen({
   const { status } = state.game;
   const inGame = status === "playing" || status === "voting" || status === "results";
 
+  // A new phase is a new screen: start it from the top, not wherever the last one was
+  // scrolled to (voting opened with its title card already scrolled out of view).
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [status, state.round?.id]);
+
   return (
     <GameContext.Provider value={ctx}>
       <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col gap-4 p-3 pb-8 sm:gap-5 sm:p-5">
@@ -603,7 +609,7 @@ function GameScreen({
             </button>
           )}
           {inGame && ctx.isHost && (
-            <ConfirmButton className="tool gap-1.5 text-xs" onConfirm={() => void call("lobby")}>
+            <ConfirmButton compact className="tool" onConfirm={() => void call("lobby")}>
               <Icon name="replay" size={17} />
               <span className="sr-only">{t("header.endGame")}</span>
             </ConfirmButton>

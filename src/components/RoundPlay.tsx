@@ -96,10 +96,11 @@ export function RoundPlay() {
 
   return (
     <section className="card-pop animate-rise mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex items-center gap-3">
-        {/* On a phone the letter rides in this row, so an open keyboard doesn't push
-            the answer fields off screen; wider panels get the big centred tile below. */}
-        <span className="sm:hidden">
+      {/* Stays pinned while the fields scroll, so the clock is always in sight. On short
+          panels (phones, Discord's desktop panel) the letter rides in this row too; only
+          roomy screens get the big centred tile below. */}
+      <div className="sticky top-2 z-20 -mx-2 flex items-center gap-3 rounded-3xl bg-paper/95 p-2 backdrop-blur">
+        <span className="tall:hidden">
           <LetterTile letter={round.letter} size={64} animate />
         </span>
         <div className="min-w-0 flex-1">
@@ -120,7 +121,7 @@ export function RoundPlay() {
         <TimerRing remainingMs={round.endsAt - now} totalMs={round.endsAt - round.startedAt} size={60} />
       </div>
 
-      <div className="hidden justify-center py-2 sm:flex">
+      <div className="hidden justify-center py-2 tall:flex">
         <LetterTile letter={round.letter} size={150} animate />
       </div>
 
@@ -180,7 +181,7 @@ export function RoundPlay() {
                     // Mobile keyboards cover the lower half of the screen; keep the focused field visible.
                     onFocus={(e) => {
                       const field = e.currentTarget;
-                      setTimeout(() => field.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+                      setTimeout(() => field.scrollIntoView({ block: "nearest", behavior: "smooth" }), 250);
                     }}
                     onChange={(e) => setDraft(category, e.target.value)}
                     onKeyDown={(e) => {

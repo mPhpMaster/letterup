@@ -111,7 +111,21 @@ export function TimerRing({ remainingMs, totalMs, size = 64 }: { remainingMs: nu
 }
 
 /** Two-step button: Discord's sandboxed iframe blocks window.confirm(). */
-export function ConfirmButton({ onConfirm, children, className = "btn btn-ghost btn-sm" }: { onConfirm: () => void; children: ReactNode; className?: string }) {
+export function ConfirmButton({
+  onConfirm,
+  children,
+  className = "btn btn-ghost btn-sm",
+  compact = false,
+}: {
+  onConfirm: () => void;
+  children: ReactNode;
+  className?: string;
+  /**
+   * Icon buttons in a row: swapping in the prompt text widened the button and slid
+   * its neighbours under the pointer, so the second tap landed on the wrong button.
+   */
+  compact?: boolean;
+}) {
   const { t } = useI18n();
   const [armed, setArmed] = useState(false);
   useEffect(() => {
@@ -122,7 +136,7 @@ export function ConfirmButton({ onConfirm, children, className = "btn btn-ghost 
   return (
     <button
       type="button"
-      className={className}
+      className={`${className} ${compact ? "relative" : ""}`}
       style={armed ? { background: "var(--color-brand)", color: "#fff" } : undefined}
       onClick={() => {
         if (armed) {
@@ -133,7 +147,15 @@ export function ConfirmButton({ onConfirm, children, className = "btn btn-ghost 
         }
       }}
     >
-      {armed ? t("common.confirmTap") : children}
+      {compact ? children : armed ? t("common.confirmTap") : children}
+      {compact && armed && (
+        <span
+          role="status"
+          className="animate-rise absolute top-full end-0 z-30 mt-2 rounded-xl bg-ink px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-cream shadow-[0_4px_0_var(--color-ink-deep)]"
+        >
+          {t("common.confirmTap")}
+        </span>
+      )}
     </button>
   );
 }
@@ -227,13 +249,24 @@ export function AppHeader({
   );
 }
 
-export function PlayerName({ player, meId, onClick }: { player: PlayerView; meId: string; onClick?: () => void }) {
+export function PlayerName({
+  player,
+  meId,
+  onClick,
+  showCrown = true,
+}: {
+  player: PlayerView;
+  meId: string;
+  onClick?: () => void;
+  /** Off where a HOST badge already says it, leaving the name more room. */
+  showCrown?: boolean;
+}) {
   const { t } = useI18n();
   const content = (
     <>
       <span className="truncate font-extrabold">{player.username}</span>
       {player.id === meId && <span className="shrink-0 text-xs font-bold text-muted">({t("common.you")})</span>}
-      {player.isHost && <Icon name="crown" size={15} className="shrink-0 text-accent-deep" filled />}
+      {player.isHost && showCrown && <Icon name="crown" size={15} className="shrink-0 text-accent-deep" filled />}
     </>
   );
   if (!onClick) return <span className="flex min-w-0 items-center gap-1.5">{content}</span>;

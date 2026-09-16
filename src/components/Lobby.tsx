@@ -90,7 +90,7 @@ export function Lobby() {
                 >
                   <Avatar name={p.username} url={p.avatarUrl} size={40} dim={!online} />
                   <span className="flex min-w-0 flex-1 text-sm">
-                    <PlayerName player={p} meId={state.me.playerId} onClick={() => openProfile(p.userId)} />
+                    <PlayerName player={p} meId={state.me.playerId} showCrown={!online} onClick={() => openProfile(p.userId)} />
                   </span>
                   {!online ? (
                     <span className="shrink-0 text-[11px] font-extrabold text-ink/40">{t("common.away")}</span>

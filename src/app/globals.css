@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Wide and tall enough for the hero letter without pushing the timer off screen. */
+@custom-variant tall (@media (min-width: 40rem) and (min-height: 760px));
+
 /*
  * LetterUp design system — "Confetti Pop Party" (from the letterup-party-playground
  * prototype): a playful party palette, chunky sticker shadows, rounded display type.
