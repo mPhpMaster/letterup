@@ -9,17 +9,21 @@ import { Avatar, Spinner } from "./ui";
 export function ProfileModal({
   profile,
   loading,
+  myRoomCode = null,
   onClose,
   onToggleFollow,
   onJoinRoom,
 }: {
   profile: ProfileView | null;
   loading: boolean;
+  /** Room the viewer is in, so we don't offer to join a room they're already in. */
+  myRoomCode?: string | null;
   onClose: () => void;
   onToggleFollow: (userId: string, follow: boolean) => void;
   onJoinRoom: (code: string) => void;
 }) {
   const { t } = useI18n();
+  const canJoinTheirRoom = !!profile?.currentRoomCode && profile.currentRoomCode !== myRoomCode;
 
   const stats = profile
     ? [
@@ -83,7 +87,7 @@ export function ProfileModal({
                   <Icon name={profile.isFollowing ? "userCheck" : "userPlus"} size={17} />
                   {profile.isFollowing ? t("profile.following") : t("profile.follow")}
                 </button>
-                {profile.currentRoomCode && (
+                {canJoinTheirRoom && (
                   <button type="button" className="btn btn-mint w-full" onClick={() => onJoinRoom(profile.currentRoomCode!)}>
                     <Icon name="arrowRight" size={17} />
                     {t("profile.joinTheirRoom")}

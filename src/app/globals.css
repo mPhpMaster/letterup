@@ -94,7 +94,10 @@ body {
     background: var(--color-card);
     border: 2px solid var(--color-line);
     border-radius: 18px;
-    padding: 17px;
+    padding: 13px;
+  }
+  @media (min-width: 640px) {
+    .card { padding: 17px; }
   }
 
   /* Chunky "sticker" buttons with a solid drop shadow, as in the mockup. */
@@ -102,14 +105,14 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    min-height: 44px;
-    padding: 11px 18px;
-    border-radius: 18px;
+    gap: 7px;
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: 16px;
     border: 0;
     font-family: var(--font-heading);
     font-weight: 800;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
     background: var(--color-card);
     color: var(--color-ink);
@@ -125,7 +128,10 @@ body {
   .btn-ghost { background: var(--color-card); color: var(--color-ink); border: 2px solid var(--color-line); }
   .btn-disabled { background: var(--color-line); color: var(--color-sand); box-shadow: none; }
   .btn-sm { min-height: 34px; padding: 6px 13px; font-size: 13px; border-radius: 14px; }
-  .btn-icon { width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 22px; }
+  .btn-icon { width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 22px; flex: none; }
+  @media (min-width: 640px) {
+    .btn-icon { width: 34px; height: 34px; min-height: 34px; }
+  }
 
   .pill {
     display: inline-flex;
@@ -150,8 +156,8 @@ body {
   .seg-item {
     border: 0;
     border-radius: 20px;
-    padding: 7px 14px;
-    font-size: 13px;
+    padding: 7px 11px;
+    font-size: 12.5px;
     font-family: var(--font-heading);
     font-weight: 700;
     background: transparent;
@@ -225,7 +231,7 @@ body {
   .modal-card {
     background: var(--color-card);
     border-radius: 22px;
-    padding: 20px;
+    padding: 16px;
     width: 100%;
     box-sizing: border-box;
     box-shadow: 0 12px 0 var(--color-pink-deep);

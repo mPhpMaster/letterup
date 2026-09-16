@@ -7,7 +7,7 @@ import { HARD_LETTERS } from "@/lib/letters";
 import type { SettingsView } from "@/lib/types";
 import { useGameContext } from "./GameContext";
 import { Icon, type IconName } from "./Icon";
-import { Avatar, PlayerName } from "./ui";
+import { Avatar, ConfirmButton, PlayerName } from "./ui";
 
 const DURATIONS = [15, 30, 45, 60, 90];
 const ROUND_COUNTS = [3, 5, 10];
@@ -28,7 +28,7 @@ const CATEGORY_ICON: Record<string, IconName> = {
 };
 
 export function Lobby() {
-  const { state, me, isHost, hostName, participantIds, call, openProfile, openFriends, copyInvite } = useGameContext();
+  const { state, me, isHost, hostName, participantIds, call, openProfile, openFriends, copyInvite, leaveRoom } = useGameContext();
   const { t, locale } = useI18n();
   const settings = state.settings;
   const players = state.players;
@@ -203,6 +203,11 @@ export function Lobby() {
           </div>
         </>
       )}
+
+      <ConfirmButton className="btn btn-ghost btn-sm self-center" onConfirm={leaveRoom}>
+        <Icon name="signOut" size={15} />
+        {t("lobby.leave")}
+      </ConfirmButton>
     </div>
   );
 }

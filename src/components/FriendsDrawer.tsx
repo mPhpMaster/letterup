@@ -12,6 +12,7 @@ export function FriendsDrawer({
   social,
   token,
   canInvite,
+  roomUserIds,
   onClose,
   onFollow,
   onInvite,
@@ -21,6 +22,8 @@ export function FriendsDrawer({
   social: SocialState;
   token: string | null;
   canInvite: boolean;
+  /** Everyone already in the viewer's room — they can't be invited to it again. */
+  roomUserIds: ReadonlySet<string>;
   onClose: () => void;
   onFollow: (userId: string, follow: boolean) => void;
   onInvite: (userId: string) => void;
@@ -118,7 +121,9 @@ export function FriendsDrawer({
               onOpen={() => onOpenProfile(f.userId)}
               right={
                 <span className="flex items-center gap-1">
-                  {f.currentRoomCode ? (
+                  {roomUserIds.has(f.userId) ? (
+                    <span className="pill text-[11px] text-sand">{t("friends.inYourRoom")}</span>
+                  ) : f.currentRoomCode ? (
                     <button type="button" className="btn btn-mint btn-sm" onClick={() => onJoinRoom(f.currentRoomCode!)}>
                       {t("friends.join")}
                     </button>

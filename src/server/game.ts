@@ -308,7 +308,8 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
-type Action = (user: SessionUser, body: Body) => Promise<GameState>;
+/** Most actions answer with the caller's view of the game; `leave` is the exception. */
+type Action = (user: SessionUser, body: Body) => Promise<GameState | { left: true }>;
 
 export const actions: Record<string, Action> = {
   /** Enter (or create) the game bound to this Discord Activity instance. */
@@ -383,6 +384,26 @@ export const actions: Record<string, Action> = {
     await claimHostIfFree(game, user);
     await touch(game.id);
     return buildState(user, game.id);
+  },
+
+  /** Leave the room yourself. The seat is freed and the host passes on if it was yours. */
+  async leave(user, body) {
+    const m = await requireMember(user, body);
+    const { error } = await admin()
+      .from("players")
+      .update({ kicked_at: new Date().toISOString() })
+      .eq("id", m.me.id);
+    if (error) throw new Error(`leave: ${error.message}`);
+    if (m.game.host_user_id === user.userId) {
+      const successor = m.players.find((p) => p.id !== m.me.id && isOnline(p, Date.now()));
+      await admin()
+        .from("games")
+        .update({ host_user_id: successor?.user_id ?? null })
+        .eq("id", m.game.id)
+        .eq("host_user_id", user.userId);
+    }
+    await touch(m.game.id);
+    return { left: true };
   },
 
   /** Host removes someone from the lobby. */

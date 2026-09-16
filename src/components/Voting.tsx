@@ -26,7 +26,7 @@ export function Voting() {
 
       <AnswersBoard mode="vote" />
 
-      <div className="sticky bottom-3 z-10">
+      <div className="z-10 sm:sticky sm:bottom-3">
         {isHost ? (
           <button type="button" className="btn btn-primary w-full text-base" onClick={() => void call("tally")}>
             <Icon name="sealCheck" size={18} />

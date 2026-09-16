@@ -202,6 +202,16 @@ export async function inviteToRoom(viewer: SessionUser, targetId: string, gameId
   if (member.error) throw new Error(`invite: ${member.error.message}`);
   if (!member.data) throw new HttpError(403, "You are not in this game");
 
+  const already = await db
+    .from("players")
+    .select("id")
+    .eq("game_id", gameId)
+    .eq("user_id", targetId)
+    .is("kicked_at", null)
+    .maybeSingle();
+  if (already.error) throw new Error(`invite: ${already.error.message}`);
+  if (already.data) throw new HttpError(409, "They are already in this room");
+
   const follows = await db
     .from("follows")
     .select("followee_id")

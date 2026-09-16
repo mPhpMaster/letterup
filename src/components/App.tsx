@@ -211,6 +211,7 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
   const social = useSocial(token, state.game.id);
 
   const [showFriends, setShowFriends] = useState(false);
+  const [goHomeOpen, setGoHomeOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileView | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -246,6 +247,16 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
       }
     : null;
 
+  const goHome = () => {
+    window.location.href = "/";
+  };
+
+  const leaveRoom = () => {
+    void postJson("/api/game/leave", { gameId: state.game.id }, token ?? undefined)
+      .catch(() => {})
+      .finally(goHome);
+  };
+
   const ctx = useMemo<GameContextValue>(() => {
     const host = state.players.find((p) => p.isHost);
     return {
@@ -260,7 +271,9 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
       openProfile: setProfileId,
       openFriends: () => setShowFriends(true),
       copyInvite,
+      leaveRoom,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- leaveRoom closes over stable values
   }, [state, offset, participantIds, call, refresh, copyInvite, t]);
 
   const { status } = state.game;
@@ -269,15 +282,25 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
   return (
     <GameContext.Provider value={ctx}>
       <div className="mx-auto flex min-h-dvh w-full max-w-[760px] flex-col px-4 pb-6">
-        <header className="flex flex-wrap items-center gap-2.5 border-b-2 border-line py-3">
-          <span className="headline grid size-9 shrink-0 place-items-center rounded-[11px] bg-orange text-[19px] text-white">L</span>
-          <span className="headline me-auto text-[19px]">{t("app.short")}</span>
+        <header className="flex items-center gap-1.5 border-b-2 border-line py-2.5 sm:gap-2.5 sm:py-3">
+          {/* Tapping the name leaves the game screen — always with a confirmation. */}
+          <button
+            type="button"
+            className="me-auto flex min-w-0 items-center gap-2"
+            onClick={() => setGoHomeOpen(true)}
+            aria-label={t("nav.goHomeTitle")}
+          >
+            <span className="headline grid size-8 shrink-0 place-items-center rounded-[10px] bg-orange text-[17px] text-white sm:size-9 sm:text-[19px]">
+              L
+            </span>
+            <span className="headline truncate text-[17px] sm:text-[19px]">{t("app.short")}</span>
+          </button>
           {inGame && (
-            <span className="pill" style={{ background: "var(--color-sun)", borderColor: "transparent" }}>
+            <span className="pill text-[11px] whitespace-nowrap sm:text-[12px]" style={{ background: "var(--color-sun)", borderColor: "transparent" }}>
               {t("header.round", { current: state.game.currentRound, total: state.settings.totalRounds })}
             </span>
           )}
-          <button type="button" className="btn btn-ghost btn-icon relative" onClick={() => setShowFriends(true)} aria-label={t("header.friends")}>
+          <button type="button" className="btn btn-ghost btn-icon relative shrink-0" onClick={() => setShowFriends(true)} aria-label={t("header.friends")}>
             <Icon name="users" size={17} />
             {social.social.invites.length > 0 && (
               <span className="absolute -end-1 -top-1 grid size-4 place-items-center rounded-full bg-pink text-[10px] font-bold text-white">
@@ -285,11 +308,17 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
               </span>
             )}
           </button>
-          {inGame && ctx.isHost && <ConfirmButton onConfirm={() => void call("lobby")}>{t("header.endGame")}</ConfirmButton>}
+          {inGame && ctx.isHost && (
+            <ConfirmButton onConfirm={() => void call("lobby")}>
+              <Icon name="replay" size={15} />
+              <span className="hidden sm:inline">{t("header.endGame")}</span>
+            </ConfirmButton>
+          )}
           <LanguageToggle />
         </header>
 
-        <main className="flex flex-1 flex-col gap-4 py-4">
+        {/* Bottom padding keeps the sticky action buttons clear of the last row on mobile. */}
+        <main className="flex flex-1 flex-col gap-4 pt-4 pb-24">
           {status === "lobby" && <Lobby />}
           {status === "playing" && state.round && <RoundPlay key={state.round.id} />}
           {status === "voting" && state.round && <Voting />}
@@ -302,6 +331,7 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
             social={social.social}
             token={token}
             canInvite={!!state.game.roomCode}
+            roomUserIds={new Set(state.players.map((p) => p.userId))}
             onClose={() => setShowFriends(false)}
             onFollow={(userId, follow) => void social.follow(userId, follow)}
             onInvite={(userId) => void social.invite(userId)}
@@ -319,6 +349,7 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
           <ProfileModal
             profile={profile}
             loading={!profile}
+            myRoomCode={state.game.roomCode}
             onClose={() => setProfileId(null)}
             onToggleFollow={(userId, follow) => {
               void social.follow(userId, follow);
@@ -328,6 +359,23 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
               window.location.href = `/?room=${code}`;
             }}
           />
+        )}
+
+        {goHomeOpen && (
+          <div className="modal-backdrop" onClick={() => setGoHomeOpen(false)}>
+            <div className="modal-card max-w-[340px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("nav.goHomeTitle")}>
+              <h3 className="headline text-[19px]">{t("nav.goHomeTitle")}</h3>
+              <p className="text-sm text-muted">{t("nav.goHomeBody")}</p>
+              <div className="flex gap-2">
+                <button type="button" className="btn btn-ghost flex-1" onClick={() => setGoHomeOpen(false)}>
+                  {t("nav.stay")}
+                </button>
+                <button type="button" className="btn btn-primary flex-1" onClick={goHome}>
+                  {t("nav.goHomeConfirm")}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {(error || toast) && (

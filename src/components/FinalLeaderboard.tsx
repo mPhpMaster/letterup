@@ -74,7 +74,7 @@ export function FinalLeaderboard() {
         </div>
       )}
 
-      <div className="sticky bottom-3 z-10 w-full">
+      <div className="z-10 w-full sm:sticky sm:bottom-3">
         {isHost ? (
           <button type="button" className="btn btn-primary w-full text-base" onClick={() => void call("lobby")}>
             <Icon name="replay" size={18} />

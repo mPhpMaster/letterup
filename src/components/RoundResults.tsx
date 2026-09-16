@@ -24,21 +24,21 @@ export function RoundResults() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3 px-3 text-[11px] font-bold tracking-wide text-sand uppercase">
+        <div className="flex items-center gap-2 px-3 text-[10px] font-bold tracking-wide text-sand uppercase sm:gap-3 sm:text-[11px]">
           <span className="w-5" />
           <span className="flex-1" />
-          <span className="w-16 text-end">{t("results.thisRound")}</span>
-          <span className="w-14 text-end">{t("results.total")}</span>
+          <span className="w-12 text-end sm:w-16">{t("results.thisRound")}</span>
+          <span className="w-10 text-end sm:w-14">{t("results.total")}</span>
         </div>
         {ranked.map((p) => (
-          <div key={p.id} className="animate-score-pop flex items-center gap-3 rounded-[16px] border-2 border-line bg-card p-3">
+          <div key={p.id} className="animate-score-pop flex items-center gap-2 rounded-[16px] border-2 border-line bg-card p-2.5 sm:gap-3 sm:p-3">
             <span className="headline w-5 text-[16px] text-sand">{p.rank}</span>
-            <Avatar name={p.username} url={p.avatarUrl} size={38} />
+            <Avatar name={p.username} url={p.avatarUrl} size={32} />
             <span className="min-w-0 flex-1">
               <PlayerName player={p} meId={state.me.playerId} onClick={() => openProfile(p.userId)} />
             </span>
-            <span className="w-16 text-end text-[11px] font-bold text-mint">+{roundPoints(p.id)}</span>
-            <span className="headline w-14 text-end text-[18px] text-orange">{p.score}</span>
+            <span className="w-12 text-end text-[11px] font-bold text-mint sm:w-16">+{roundPoints(p.id)}</span>
+            <span className="headline w-10 text-end text-[18px] text-orange sm:w-14">{p.score}</span>
           </div>
         ))}
       </div>
@@ -53,7 +53,7 @@ export function RoundResults() {
         </div>
       </details>
 
-      <div className="sticky bottom-3 z-10">
+      <div className="z-10 sm:sticky sm:bottom-3">
         {isHost ? (
           <button type="button" className="btn btn-primary w-full text-base" onClick={() => void call("next")}>
             <Icon name="arrowRight" size={18} />

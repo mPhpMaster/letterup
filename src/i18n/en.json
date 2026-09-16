@@ -81,7 +81,9 @@
     "readyCount": "{ready}/{total} ready",
     "imReady": "I'm ready",
     "readyOn": "Ready! Tap to cancel",
-    "waitingHost": "Waiting for {name} to start the game…"
+    "waitingHost": "Waiting for {name} to start the game…",
+    "leave": "Leave lobby",
+    "leaveGame": "Leave game"
   },
   "categories": {
     "human": "Human",
@@ -160,6 +162,7 @@
     "offline": "Offline",
     "invite": "Invite",
     "invited": "Invited",
+    "inYourRoom": "Already here",
     "inviteSent": "Invite sent!",
     "inviteNeedsRoom": "Start or join a room first, then invite friends to it.",
     "join": "Join",
@@ -186,6 +189,12 @@
     "join": "Join",
     "dismiss": "Dismiss",
     "none": "No invites right now."
+  },
+  "nav": {
+    "goHomeTitle": "Go to the home page?",
+    "goHomeBody": "You'll leave this game screen and go back to the start page. The room stays open, so you can rejoin with its code.",
+    "goHomeConfirm": "Yes, go home",
+    "stay": "Stay here"
   },
   "errors": {
     "generic": "Something went wrong."

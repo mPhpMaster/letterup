@@ -108,25 +108,27 @@ function AnswerRow({
 
   return (
     <div
-      className="flex items-center gap-2.5 rounded-[16px] border-2 border-line bg-card px-3 py-2.5"
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-[16px] border-2 border-line bg-card px-2.5 py-2 sm:flex-nowrap sm:px-3 sm:py-2.5"
       style={{ borderInlineStartWidth: 5, borderInlineStartColor: statusColor }}
     >
       <button type="button" onClick={() => openProfile(player.userId)} aria-label={player.username}>
         <Avatar name={player.username} url={player.avatarUrl} size={28} />
       </button>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-[55%]">
         <div className="truncate text-[14px] font-semibold" dir="auto">
           {hasValue ? answer!.value : "—"}
         </div>
         <div className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: statusColor }}>
           <span>{statusLabel}</span>
-          <span className="text-sand">· {player.username}</span>
+          <button type="button" className="text-sand hover:underline" onClick={() => openProfile(player.userId)}>
+            · {player.username}
+          </button>
           {answer?.hostVerdict != null && <span className="text-orange">· {t("vote.hostRuled")}</span>}
         </div>
       </div>
 
       {mode === "vote" && answer && hasValue && !mine && (
-        <div className="flex items-center gap-1" role="group" aria-label={t("vote.votes")}>
+        <div className="ms-auto flex items-center gap-1" role="group" aria-label={t("vote.votes")}>
           <VoteButton
             pressed={answer.myVote === true}
             label={t("vote.approve")}

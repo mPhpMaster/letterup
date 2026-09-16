@@ -20,6 +20,8 @@ export interface GameContextValue {
   openFriends: () => void;
   /** Copies the room invite link; null when the room can't be shared (Discord Activity). */
   copyInvite: (() => void) | null;
+  /** Leaves the room and returns to the start page. */
+  leaveRoom: () => void;
 }
 
 export const GameContext = createContext<GameContextValue | null>(null);

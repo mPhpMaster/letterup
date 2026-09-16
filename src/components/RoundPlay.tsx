@@ -27,7 +27,7 @@ const CATEGORY_ICON: Record<string, IconName> = {
 };
 
 export function RoundPlay() {
-  const { state, isHost, offset, call, refresh } = useGameContext();
+  const { state, isHost, offset, call, refresh, openProfile } = useGameContext();
   const { t } = useI18n();
   const round = state.round!;
   const now = useServerNow(offset);
@@ -102,14 +102,14 @@ export function RoundPlay() {
         {activePlayers.map((p) => {
           const done = round.submittedPlayerIds.includes(p.id);
           return (
-            <span key={p.id} className="relative" title={p.username}>
+            <button key={p.id} type="button" className="relative" title={p.username} aria-label={p.username} onClick={() => openProfile(p.userId)}>
               <Avatar name={p.username} url={p.avatarUrl} size={36} dim={!done} />
               {done && (
                 <span className="animate-check-pop absolute -end-1 -bottom-1 grid size-4 place-items-center rounded-full border-2 border-cream bg-mint">
                   <Icon name="check" size={9} className="text-mint-deep" strokeWidth={3.5} />
                 </span>
               )}
-            </span>
+            </button>
           );
         })}
       </div>
@@ -171,7 +171,8 @@ export function RoundPlay() {
           );
         })}
 
-        <div className="sticky bottom-3 z-10 flex flex-wrap gap-2">
+        {/* On phones the button sits after the fields; from sm up it pins to the bottom. */}
+        <div className="z-10 flex flex-wrap gap-2 sm:sticky sm:bottom-3">
           <button type="submit" className={`btn flex-1 text-base ${locked ? "btn-disabled" : "btn-primary"}`} disabled={locked}>
             <Icon name="checkCircle" size={18} />
             {submitted ? t("play.submitted") : t("play.done")}

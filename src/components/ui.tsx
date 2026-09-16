@@ -44,16 +44,18 @@ export function Avatar({
 }
 
 export function LetterTile({ letter, size = 100, animate = false }: { letter: string; size?: number; animate?: boolean }) {
+  // Sizes are capped in viewport units so the tile shrinks on Discord's narrow mobile panel.
+  const box = `min(${size}px, ${Math.round(size / 4)}vw)`;
   return (
     <span
-      className={`headline grid place-items-center text-white ${animate ? "animate-pop-letter" : ""}`}
+      className={`headline grid shrink-0 place-items-center text-white ${animate ? "animate-pop-letter" : ""}`}
       style={{
-        width: size,
-        height: size,
-        borderRadius: size * 0.26,
+        width: box,
+        height: box,
+        borderRadius: `calc(${box} * 0.26)`,
         background: "var(--color-pink)",
-        boxShadow: `0 ${Math.round(size * 0.08)}px 0 var(--color-pink-deep)`,
-        fontSize: size * 0.5,
+        boxShadow: `0 calc(${box} * 0.08) 0 var(--color-pink-deep)`,
+        fontSize: `calc(${box} * 0.5)`,
         lineHeight: 1,
       }}
     >
@@ -69,7 +71,12 @@ export function TimerRing({ remainingMs, totalMs }: { remainingMs: number; total
   const circumference = 326.7; // r = 52
   const low = seconds <= 5 && remainingMs > 0;
   return (
-    <svg width="112" height="112" viewBox="0 0 120 120" role="timer" aria-label={t("play.timeLeft", { seconds })} className="shrink-0">
+    <svg
+      viewBox="0 0 120 120"
+      role="timer"
+      aria-label={t("play.timeLeft", { seconds })}
+      className="size-[88px] shrink-0 sm:size-28"
+    >
       <circle cx="60" cy="60" r="52" fill="none" stroke="var(--color-line)" strokeWidth="8" />
       <circle
         cx="60"
@@ -129,7 +136,9 @@ export function LanguageToggle() {
       onClick={() => setLocale(locale === "en" ? "ar" : "en")}
     >
       <Icon name="globe" size={16} />
-      <span lang={locale === "en" ? "ar" : "en"}>{locale === "en" ? "العربية" : "English"}</span>
+      <span className="hidden sm:inline" lang={locale === "en" ? "ar" : "en"}>
+        {locale === "en" ? "العربية" : "English"}
+      </span>
     </button>
   );
 }
