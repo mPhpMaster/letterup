@@ -118,7 +118,7 @@ export function ProfileModal({
                     className="btn btn-ghost btn-sm flex-1"
                     onClick={() => onReport(profile.userId, profile.username)}
                   >
-                    <Icon name="closeCircle" size={15} />
+                    <Icon name="flag" size={15} />
                     {t("report.open")}
                   </button>
                   {isAdmin &&

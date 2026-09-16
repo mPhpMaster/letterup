@@ -95,7 +95,7 @@ export function Leaderboard({
                       aria-label={t("report.open")}
                       onClick={() => onReport(e.userId, e.username)}
                     >
-                      <Icon name="closeCircle" size={16} />
+                      <Icon name="flag" size={15} />
                     </button>
                   )}
                 </div>
