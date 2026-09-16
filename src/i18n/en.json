@@ -23,7 +23,9 @@
     "authorizing": "Signing you in…",
     "joining": "Joining the lobby…",
     "failed": "Couldn't start the game",
-    "hint": "Check the Activity URL mappings and environment variables, then relaunch the Activity."
+    "hint": "Check the Activity URL mappings and environment variables, then relaunch the Activity.",
+    "timeout": "Discord didn't answer in time.",
+    "timeoutHint": "This usually clears up on a second try. Tap Try again, or close the Activity and launch it again."
   },
   "login": {
     "title": "Welcome to LetterUp",

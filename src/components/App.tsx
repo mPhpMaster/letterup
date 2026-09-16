@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DiscordSDK } from "@discord/embedded-app-sdk";
 import { useI18n } from "@/i18n/I18nProvider";
 import { ApiError, getJson, postJson } from "@/lib/api";
-import { bootDiscord, isEmbeddedInDiscord, type BootStep, type DiscordBoot } from "@/lib/discord";
+import { bootDiscord, DiscordHandshakeTimeout, isEmbeddedInDiscord, type BootStep, type DiscordBoot } from "@/lib/discord";
 import type { GameState, ProfileView, RoomSummary, SessionUser } from "@/lib/types";
 import { useGame } from "@/hooks/useGame";
 import { useSocial } from "@/hooks/useSocial";
@@ -28,7 +28,7 @@ type Phase =
   | { kind: "booting"; step: BootStep }
   | { kind: "login"; error?: string | null }
   | { kind: "rooms"; user: SessionUser }
-  | { kind: "error"; message: string }
+  | { kind: "error"; message: string; messageKey?: string; hintKey?: string }
   | { kind: "game"; token: string | null; state: GameState; sdk?: DiscordSDK };
 
 /** Modals shared by the home screen and the in-game screen. */
@@ -40,6 +40,25 @@ type Overlay =
   | { kind: "ban"; userId: string; username: string }
   | { kind: "password"; code: string; error?: string | null }
   | null;
+
+const BOOT_RETRY_KEY = "lu_boot_retry";
+
+/** True once per tab session, so a stuck handshake gets exactly one automatic reload. */
+function claimBootRetry(): boolean {
+  try {
+    if (sessionStorage.getItem(BOOT_RETRY_KEY)) return false;
+    sessionStorage.setItem(BOOT_RETRY_KEY, "1");
+    return true;
+  } catch {
+    return false; // storage blocked: fall through to the error screen instead of looping
+  }
+}
+
+function forgetBootRetry() {
+  try {
+    sessionStorage.removeItem(BOOT_RETRY_KEY);
+  } catch {}
+}
 
 export default function App() {
   const { t, setLocale, hasStoredLocale } = useI18n();
@@ -89,10 +108,20 @@ export default function App() {
           const state = await postJson<GameState>("/api/game/join", { instanceId: discord.instanceId }, discord.token);
           const me = await getJson<{ isAdmin: boolean }>("/api/auth/me", discord.token).catch(() => ({ isAdmin: false }));
           setIsAdmin(me.isAdmin);
+          forgetBootRetry();
           enterGame(state, discord.token, discord.sdk);
         } catch (err) {
           console.error(err);
-          setPhase({ kind: "error", message: err instanceof Error ? err.message : String(err) });
+          if (err instanceof DiscordHandshakeTimeout) {
+            // Relaunching is what cleared this in testing, so do it once for the player.
+            if (claimBootRetry()) {
+              window.location.reload();
+              return;
+            }
+            setPhase({ kind: "error", message: err.message, messageKey: "boot.timeout", hintKey: "boot.timeoutHint" });
+          } else {
+            setPhase({ kind: "error", message: err instanceof Error ? err.message : String(err) });
+          }
         }
         return;
       }
@@ -393,10 +422,10 @@ export default function App() {
         {phase.kind === "error" && (
           <div className="card w-full text-start">
             <p className="headline text-pink">{t("boot.failed")}</p>
-            <p className="mt-1 break-words text-sm text-muted" dir="ltr">
-              {phase.message}
+            <p className="mt-1 break-words text-sm text-muted" dir={phase.messageKey ? undefined : "ltr"}>
+              {phase.messageKey ? t(phase.messageKey) : phase.message}
             </p>
-            <p className="mt-3 text-sm text-muted">{t("boot.hint")}</p>
+            <p className="mt-3 text-sm text-muted">{t(phase.hintKey ?? "boot.hint")}</p>
             <button type="button" className="btn btn-primary mt-4 w-full" onClick={() => window.location.reload()}>
               {t("common.retry")}
             </button>

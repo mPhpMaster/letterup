@@ -1,8 +1,24 @@
 import { DiscordSDK, patchUrlMappings } from "@discord/embedded-app-sdk";
 import { postJson } from "./api";
+import { withTimeout } from "./timeout";
 import type { SessionUser } from "./types";
 
 export type BootStep = "connecting" | "authorizing" | "joining";
+
+/**
+ * Discord never answered the Activity handshake. Seen in the desktop client on a
+ * first launch: the frame loads, sdk.ready() simply never resolves, and the player
+ * is left on a spinner. Relaunching cleared it every time.
+ */
+export class DiscordHandshakeTimeout extends Error {
+  constructor() {
+    super("Discord did not answer the Activity handshake");
+    this.name = "DiscordHandshakeTimeout";
+  }
+}
+
+// A healthy handshake lands in a second or two; this is generous on purpose.
+const HANDSHAKE_TIMEOUT_MS = 15_000;
 
 export interface DiscordBoot {
   sdk: DiscordSDK;
@@ -32,7 +48,9 @@ export async function bootDiscord(onStep: (step: BootStep) => void): Promise<Dis
 
   const sdk = new DiscordSDK(clientId);
   onStep("connecting");
-  await sdk.ready();
+  // Only the handshake gets a deadline. authorize() below can put a consent
+  // dialog in front of a first-time player, and that wait is theirs to take.
+  await withTimeout(sdk.ready(), HANDSHAKE_TIMEOUT_MS, () => new DiscordHandshakeTimeout());
 
   onStep("authorizing");
   const { code } = await sdk.commands.authorize({

@@ -14,7 +14,8 @@ export function Voting() {
   const { state, isHost, hostName, offset, call } = useGameContext();
   const { t } = useI18n();
   const round = state.round!;
-  const twoPlayers = state.players.length <= 2;
+  // Exactly two: a solo round has nobody to outvote, so the two-player rule would mislead.
+  const twoPlayers = state.players.length === 2;
 
   // Read the shared clock, not this device's -- the deadline lives on the server.
   const now = useServerNow(offset);
@@ -49,8 +50,11 @@ export function Voting() {
 
       <AnswersBoard mode="vote" />
 
-      <div className="z-10 flex flex-col gap-2 sm:sticky sm:bottom-3">
-        {round.voteEndsAt !== null && <p className="text-center text-[11px] text-muted">{t("vote.autoConfirm")}</p>}
+      {/* Kept out of the sticky bar below: that bar has no background, so text in it
+          floated over the answers as they scrolled underneath. */}
+      {round.voteEndsAt !== null && <p className="text-center text-[11px] text-muted">{t("vote.autoConfirm")}</p>}
+
+      <div className="z-10 sm:sticky sm:bottom-3">
         {reviewing ? (
           <div className="waiting">
             <Icon name="hourglass" size={16} className="me-1.5 inline" />
