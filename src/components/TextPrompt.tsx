@@ -39,7 +39,8 @@ export function TextPrompt({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    // z-60: these prompts open on top of another modal (profile, leaderboard, friends).
+    <div className="modal-backdrop z-[60]" onClick={onClose}>
       <form className="modal-card max-w-[360px]" onClick={(e) => e.stopPropagation()} onSubmit={submit} role="dialog" aria-label={title}>
         <div className="flex items-start gap-2">
           <div className="flex-1">

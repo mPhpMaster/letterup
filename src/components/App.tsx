@@ -273,7 +273,7 @@ export default function App() {
         />
       )}
       {notice && (
-        <div role="status" className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-w-md rounded-[16px] border-2 border-line bg-card px-4 py-3 text-center text-sm font-semibold shadow-lg">
+        <div role="status" className="fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-md rounded-[16px] border-2 border-line bg-card px-4 py-3 text-center text-sm font-semibold shadow-lg">
           <span dir="auto">{notice}</span>
         </div>
       )}
