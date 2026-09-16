@@ -497,7 +497,7 @@ function GameScreen({
             <span className="headline grid size-8 shrink-0 place-items-center rounded-[10px] bg-orange text-[17px] text-white sm:size-9 sm:text-[19px]">
               L
             </span>
-            <span className="headline truncate text-[17px] sm:text-[19px]">{t("app.short")}</span>
+            <span className="headline hidden truncate text-[17px] min-[430px]:inline sm:text-[19px]">{t("app.short")}</span>
           </button>
           {inGame && (
             <span className="pill text-[11px] whitespace-nowrap sm:text-[12px]" style={{ background: "var(--color-sun)", borderColor: "transparent" }}>

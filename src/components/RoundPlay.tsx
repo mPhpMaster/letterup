@@ -94,9 +94,15 @@ export function RoundPlay() {
 
   return (
     <div className="animate-rise flex flex-col items-center gap-4">
-      <p className="text-[12px] font-bold tracking-wider text-muted uppercase">{t("play.letterIs")}</p>
-      <LetterTile letter={round.letter} size={100} />
-      <TimerRing remainingMs={round.endsAt - now} totalMs={round.endsAt - round.startedAt} />
+      {/* Letter and timer sit side by side: on a phone with the keyboard open,
+          stacking them pushed the answer fields off screen. */}
+      <div className="flex w-full items-center justify-center gap-5">
+        <div className="flex flex-col items-center gap-1.5">
+          <p className="text-[11px] font-bold tracking-wider text-muted uppercase">{t("play.letterIs")}</p>
+          <LetterTile letter={round.letter} size={92} />
+        </div>
+        <TimerRing remainingMs={round.endsAt - now} totalMs={round.endsAt - round.startedAt} />
+      </div>
 
       <div className="flex flex-wrap justify-center gap-2">
         {activePlayers.map((p) => {
@@ -159,6 +165,11 @@ export function RoundPlay() {
                 placeholder={t("play.placeholder", { letter: round.letter })}
                 value={value}
                 disabled={locked}
+                // Mobile keyboards cover the lower half of the screen; keep the focused field visible.
+                onFocus={(e) => {
+                  const field = e.currentTarget;
+                  setTimeout(() => field.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+                }}
                 onChange={(e) => setDraft(category, e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && i < round.categories.length - 1) {
