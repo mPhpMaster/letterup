@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DiscordSDK } from "@discord/embedded-app-sdk";
 import { useI18n } from "@/i18n/I18nProvider";
 import { ApiError, getJson, postJson } from "@/lib/api";
-import { bootDiscord, isEmbeddedInDiscord, type BootStep } from "@/lib/discord";
+import { bootDiscord, isEmbeddedInDiscord, type BootStep, type DiscordBoot } from "@/lib/discord";
 import type { GameState, ProfileView, RoomSummary, SessionUser } from "@/lib/types";
 import { useGame } from "@/hooks/useGame";
 import { useSocial } from "@/hooks/useSocial";
@@ -52,6 +52,10 @@ export default function App() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileView | null>(null);
   const started = useRef(false);
+  // Held on to so leaving a lobby can fall back to the room list instead of a
+  // reload, and still offer the way back into this voice channel's Activity.
+  const discordBoot = useRef<DiscordBoot | null>(null);
+  const [signedIn, setSignedIn] = useState<SessionUser | null>(null);
 
   const roomFromUrl = () => new URLSearchParams(window.location.search).get("room")?.toUpperCase() ?? "";
 
@@ -78,6 +82,8 @@ export default function App() {
       if (isEmbeddedInDiscord()) {
         try {
           const discord = await bootDiscord((step) => setPhase({ kind: "booting", step }));
+          discordBoot.current = discord;
+          setSignedIn(discord.user);
           if (!hasStoredLocale() && discord.locale?.toLowerCase().startsWith("ar")) setLocale("ar");
           setPhase({ kind: "booting", step: "joining" });
           const state = await postJson<GameState>("/api/game/join", { instanceId: discord.instanceId }, discord.token);
@@ -101,6 +107,7 @@ export default function App() {
         setPhase({ kind: "login", error: authError });
         return;
       }
+      setSignedIn(me.user);
       const code = roomFromUrl();
       if (code) {
         try {
@@ -116,6 +123,21 @@ export default function App() {
   }, [enterGame, hasStoredLocale, setLocale]);
 
   const token = phase.kind === "game" ? phase.token : null;
+
+  /** Back into this voice channel's Activity game after stepping out of it. */
+  const rejoinActivity = async () => {
+    const boot = discordBoot.current;
+    if (!boot) return;
+    setBusy(true);
+    setJoinError(null);
+    try {
+      enterGame(await postJson<GameState>("/api/game/join", { instanceId: boot.instanceId }, boot.token), boot.token, boot.sdk);
+    } catch (err) {
+      setJoinError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const createRoom = async (password?: string) => {
     setBusy(true);
@@ -162,6 +184,12 @@ export default function App() {
   }, [profileId, token]);
 
   /** The session cookie is HttpOnly, so signing out has to go through the server. */
+  /** Leaving a lobby lands on the room list; only reload if we never learned who is signed in. */
+  const exitToRooms = () => {
+    if (signedIn) setPhase({ kind: "rooms", user: signedIn });
+    else window.location.href = "/";
+  };
+
   const signOut = () => {
     void postJson("/api/auth/logout", {})
       .catch(() => {})
@@ -300,6 +328,7 @@ export default function App() {
           onOpenProfile={setProfileId}
           onOpenLeaderboard={() => setOverlay({ kind: "leaderboard" })}
           onOpenAdmin={() => setOverlay({ kind: "admin" })}
+          onExit={exitToRooms}
         />
         {overlays}
       </>
@@ -313,7 +342,7 @@ export default function App() {
       <>
         <RoomChoice
           user={phase.user}
-          token={null}
+          token={discordBoot.current?.token ?? null}
           isAdmin={isAdmin}
           onCreate={(password) => void createRoom(password)}
           onJoin={(code) => void joinRoom(code)}
@@ -323,11 +352,19 @@ export default function App() {
           onOpenLeaderboard={() => setOverlay({ kind: "leaderboard" })}
           onOpenSuggest={() => setOverlay({ kind: "suggest" })}
           onOpenAdmin={() => setOverlay({ kind: "admin" })}
+          onOpenProfile={setProfileId}
           onSignOut={signOut}
           busy={busy}
           error={joinError}
           initialCode={roomFromUrl()}
         >
+          {/* Inside the Activity this is the way back to the game in this voice channel. */}
+          {discordBoot.current && (
+            <button type="button" className="btn btn-discord text-base" onClick={() => void rejoinActivity()} disabled={busy}>
+              <Icon name="play" size={18} filled />
+              {t("room.backToActivity")}
+            </button>
+          )}
           <PendingInvites onJoin={(code) => void joinRoom(code)} />
         </RoomChoice>
         {overlays}
@@ -342,7 +379,11 @@ export default function App() {
       </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
         <span className="headline grid size-[72px] place-items-center rounded-[22px] bg-orange text-[34px] text-white">L</span>
-        <h1 className="headline text-2xl">{t("app.title")}</h1>
+        {/* The game's name belongs on the splash; the long description sits under it. */}
+        <div>
+          <h1 className="headline text-[28px]">{t("app.short")}</h1>
+          <p className="mt-1 text-[13px] text-muted">{t("app.title")}</p>
+        </div>
         {phase.kind === "booting" && (
           <>
             <Spinner />
@@ -428,6 +469,7 @@ function GameScreen({
   onOpenProfile,
   onOpenLeaderboard,
   onOpenAdmin,
+  onExit,
 }: {
   token: string | null;
   initial: GameState;
@@ -436,6 +478,7 @@ function GameScreen({
   onOpenProfile: (userId: string) => void;
   onOpenLeaderboard: () => void;
   onOpenAdmin: () => void;
+  onExit: () => void;
 }) {
   const { t } = useI18n();
   const { state, offset, error, clearError, call, refresh } = useGame(token, initial);
@@ -461,9 +504,18 @@ function GameScreen({
       }
     : null;
 
-  const goHome = () => {
-    window.location.href = "/";
-  };
+  // Discord's own dialog is the quickest way to pull in someone already in the
+  // server, and it only exists while we are running inside the Activity.
+  const openDiscordInvite = sdk
+    ? () => {
+        void sdk.commands.openInviteDialog().catch(() => flash(t("errors.generic")));
+      }
+    : null;
+
+  // A reload was fine on the web, but inside the Activity it re-runs the boot,
+  // which rejoins this channel's game -- so leaving looked like the game had shut
+  // and reopened. Hand control back to the shell and let it show the room list.
+  const goHome = () => onExit();
 
   const leaveRoom = () => {
     void postJson("/api/game/leave", { gameId: state.game.id }, token ?? undefined)
@@ -485,6 +537,7 @@ function GameScreen({
       openProfile: onOpenProfile,
       openFriends: () => setShowFriends(true),
       copyInvite,
+      openDiscordInvite,
       leaveRoom,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- leaveRoom/copyInvite close over stable values

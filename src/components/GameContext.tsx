@@ -20,6 +20,8 @@ export interface GameContextValue {
   openFriends: () => void;
   /** Copies the room invite link; null when the room can't be shared (Discord Activity). */
   copyInvite: (() => void) | null;
+  /** Opens Discord's own invite dialog; null outside the Activity. */
+  openDiscordInvite: (() => void) | null;
   /** Leaves the room and returns to the start page. */
   leaveRoom: () => void;
 }

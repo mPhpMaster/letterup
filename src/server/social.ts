@@ -28,6 +28,8 @@ export async function touchProfile(user: SessionUser): Promise<void> {
         user_id: user.userId,
         username: user.username.slice(0, 64),
         avatar_url: user.avatarUrl,
+        // The @handle people actually look each other up by; search matches it too.
+        handle: user.handle,
         last_seen_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -263,7 +265,10 @@ export async function searchProfiles(viewer: SessionUser, query: string): Promis
     db
       .from("profiles")
       .select("user_id, username, avatar_url, last_seen_at")
-      .ilike("username", `%${escaped}%`)
+      // Match the display name or the @handle. PostgREST parses commas and
+      // parentheses inside an `or` filter as grammar, so they are dropped from the
+      // term rather than allowed to rewrite the query.
+      .or(`username.ilike.%${escaped.replace(/[(),]/g, " ")}%,handle.ilike.%${escaped.replace(/[(),]/g, " ")}%`)
       .neq("user_id", viewer.userId)
       .order("last_seen_at", { ascending: false })
       .limit(8)

@@ -13,7 +13,7 @@ function secret(): Uint8Array {
 }
 
 export async function createSession(user: SessionUser): Promise<string> {
-  return new SignJWT({ name: user.username, avatar: user.avatarUrl, kind: user.kind })
+  return new SignJWT({ name: user.username, avatar: user.avatarUrl, handle: user.handle, kind: user.kind })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.userId)
     .setIssuer(ISSUER)
@@ -30,6 +30,8 @@ export async function verifySession(token: string): Promise<SessionUser | null> 
       userId: payload.sub,
       username: String(payload.name ?? "Player"),
       avatarUrl: typeof payload.avatar === "string" ? payload.avatar : null,
+      // Sessions minted before handles existed simply carry none.
+      handle: typeof payload.handle === "string" ? payload.handle : null,
       kind: payload.kind === "guest" ? "guest" : "discord",
     };
   } catch {
@@ -103,7 +105,8 @@ export function discordUserToSession(u: DiscordUser): SessionUser {
   const avatarUrl = u.avatar
     ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=128`
     : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(u.id) >> BigInt(22)) % BigInt(6))}.png`;
-  return { userId: u.id, username: cleanName(u.global_name || u.username), avatarUrl, kind: "discord" };
+  // global_name is what people see; u.username is the @handle they are looked up by.
+  return { userId: u.id, username: cleanName(u.global_name || u.username), avatarUrl, handle: u.username, kind: "discord" };
 }
 
 /** Exchanges an OAuth2 code for the Discord profile behind it. */

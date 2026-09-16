@@ -102,6 +102,56 @@ function AnswerRow({
   const points = mode === "final" ? (answer?.points ?? 0) : (score?.points ?? 0);
   const duplicate = score?.duplicate === true;
 
+  // Voting is the most-tapped part of the game, so both the button state and the
+  // running score move before the request comes back. round.votes carries no voter
+  // id -- buildState drops it -- but only the tallies matter, so swapping one entry
+  // for another keeps the preview honest.
+  const castVote = (next: boolean | null) =>
+    void call(
+      "vote",
+      { answerId: answer!.id, approve: next },
+      {
+        optimistic: (s) => {
+          if (!s.round) return s;
+          const was = answer!.myVote;
+          const votes = s.round.votes.filter((v, i, all) => {
+            if (was === null) return true;
+            return !(v.answerId === answer!.id && v.approve === was && all.findIndex((x) => x.answerId === v.answerId && x.approve === v.approve) === i);
+          });
+          if (next !== null) votes.push({ answerId: answer!.id, approve: next });
+          return {
+            ...s,
+            round: {
+              ...s.round,
+              votes,
+              answers: s.round.answers.map((a) =>
+                a.id === answer!.id
+                  ? {
+                      ...a,
+                      myVote: next,
+                      approvals: a.approvals + (next === true ? 1 : 0) - (was === true ? 1 : 0),
+                      rejections: a.rejections + (next === false ? 1 : 0) - (was === false ? 1 : 0),
+                    }
+                  : a,
+              ),
+            },
+          };
+        },
+      },
+    );
+
+  const castVerdict = (next: boolean | null) =>
+    void call(
+      "verdict",
+      { answerId: answer!.id, verdict: next },
+      {
+        optimistic: (s) =>
+          s.round
+            ? { ...s, round: { ...s.round, answers: s.round.answers.map((a) => (a.id === answer!.id ? { ...a, hostVerdict: next } : a)) } }
+            : s,
+      },
+    );
+
   const statusColor = !hasValue || !valid ? "var(--color-pink)" : duplicate ? "var(--color-amber)" : "var(--color-mint)";
   const statusLabel = !hasValue
     ? t("vote.noAnswer")
@@ -142,7 +192,7 @@ function AnswerRow({
             icon="thumbsUp"
             count={answer.approvals}
             color="var(--color-mint)"
-            onClick={() => void call("vote", { answerId: answer.id, approve: answer.myVote === true ? null : true })}
+            onClick={() => castVote(answer.myVote === true ? null : true)}
           />
           <VoteButton
             pressed={answer.myVote === false}
@@ -150,7 +200,7 @@ function AnswerRow({
             icon="thumbsDown"
             count={answer.rejections}
             color="var(--color-pink)"
-            onClick={() => void call("vote", { answerId: answer.id, approve: answer.myVote === false ? null : false })}
+            onClick={() => castVote(answer.myVote === false ? null : false)}
           />
           {isHost && (
             <span className="ms-1 flex items-center gap-1 border-s-2 border-line ps-1.5">
@@ -159,14 +209,14 @@ function AnswerRow({
                 label={t("vote.forceValid")}
                 icon="check"
                 color="var(--color-mint)"
-                onClick={() => void call("verdict", { answerId: answer.id, verdict: answer.hostVerdict === true ? null : true })}
+                onClick={() => castVerdict(answer.hostVerdict === true ? null : true)}
               />
               <VerdictButton
                 pressed={answer.hostVerdict === false}
                 label={t("vote.forceInvalid")}
                 icon="close"
                 color="var(--color-pink)"
-                onClick={() => void call("verdict", { answerId: answer.id, verdict: answer.hostVerdict === false ? null : false })}
+                onClick={() => castVerdict(answer.hostVerdict === false ? null : false)}
               />
             </span>
           )}

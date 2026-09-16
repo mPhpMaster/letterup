@@ -20,6 +20,7 @@ export function RoomChoice({
   onOpenLeaderboard,
   onOpenSuggest,
   onOpenAdmin,
+  onOpenProfile,
   onSignOut,
   busy,
   error,
@@ -35,6 +36,7 @@ export function RoomChoice({
   onOpenLeaderboard: () => void;
   onOpenSuggest: () => void;
   onOpenAdmin: () => void;
+  onOpenProfile: (userId: string) => void;
   onSignOut: () => void;
   busy: boolean;
   error?: string | null;
@@ -54,8 +56,11 @@ export function RoomChoice({
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4">
       <header className="flex items-center gap-2 py-3">
-        <Avatar name={user.username} url={user.avatarUrl} size={32} />
-        <span className="min-w-0 flex-1 truncate text-sm text-muted">{t("room.signedInAs", { name: user.username })}</span>
+        {/* Your own name opens your card here too -- every other name in the app does. */}
+        <button type="button" className="flex min-w-0 flex-1 items-center gap-2 text-start" onClick={() => onOpenProfile(user.userId)}>
+          <Avatar name={user.username} url={user.avatarUrl} size={32} />
+          <span className="min-w-0 flex-1 truncate text-sm text-muted hover:underline">{t("room.signedInAs", { name: user.username })}</span>
+        </button>
         {isAdmin && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenAdmin}>
             <Icon name="sealCheck" size={15} />

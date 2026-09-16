@@ -47,6 +47,8 @@ export interface RoundView {
   status: RoundStatus;
   /** Which category voting is on. Everyone reviews the same one at the same time. */
   voteCategoryIndex: number;
+  /** When voting scores itself if the room has not finished first. */
+  voteEndsAt: number | null;
   startedAt: number;
   endsAt: number;
   submittedPlayerIds: string[];
@@ -81,6 +83,8 @@ export interface SessionUser {
   userId: string;
   username: string;
   avatarUrl: string | null;
+  /** The Discord @handle behind the display name; null for guests. */
+  handle: string | null;
   kind: "discord" | "guest";
 }
 

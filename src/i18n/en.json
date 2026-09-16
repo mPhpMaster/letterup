@@ -41,6 +41,7 @@
     "joinCta": "Join",
     "joining": "Joining…",
     "signedInAs": "Signed in as {name}",
+    "backToActivity": "Back to the Activity",
     "signOut": "Sign out"
   },
   "header": {
@@ -57,6 +58,7 @@
     "invite": "Anyone in the voice channel can join by launching the Activity.",
     "inviteWeb": "Share the room code or the invite link with your friends.",
     "inviteFriends": "Invite Friends",
+    "inviteDiscord": "Invite on Discord",
     "copyLink": "Copy Invite Link",
     "linkCopied": "Link copied!",
     "copyFailed": "Couldn't copy — the link is {link}",
@@ -131,6 +133,7 @@
     "votes": "Votes",
     "hostControls": "Host ruling",
     "progress": "Category {current} of {total}",
+    "autoConfirm": "Scores are confirmed automatically when the timer runs out.",
     "waitingOthers": "Waiting for everyone to vote on this category…",
     "allReviewed": "Every category reviewed.",
     "confirm": "Confirm Scores",

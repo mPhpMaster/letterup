@@ -69,6 +69,7 @@ interface RoundRow {
   started_at: string;
   ends_at: string;
   vote_category_index: number;
+  vote_ends_at: string | null;
 }
 interface AnswerRow {
   id: string;
@@ -261,6 +262,7 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
       categories: r.categories,
       status: r.status,
       voteCategoryIndex: r.vote_category_index,
+      voteEndsAt: r.vote_ends_at ? Date.parse(r.vote_ends_at) : null,
       startedAt: Date.parse(r.started_at),
       endsAt: Date.parse(r.ends_at),
       submittedPlayerIds: check(subs, "submissions").map((s) => s.player_id),
@@ -349,6 +351,30 @@ export const actions: Record<string, Action> = {
     ]);
     if (settingsRes.error) throw new Error(`settings: ${settingsRes.error.message}`);
     if (playerRes.error) throw new Error(`player: ${playerRes.error.message}`);
+
+    // Discord instances used to carry no room code, which left both the invite link
+    // and the "invite a friend" button dead inside the Activity -- the client hides
+    // them when there is nothing to share. Give every game one so a friend can be
+    // sent a link and walk in from anywhere.
+    for (let attempt = 0; attempt < 5 && !game.room_code; attempt++) {
+      const res = await db
+        .from("games")
+        .update({ room_code: newRoomCode() })
+        .eq("id", game.id)
+        .is("room_code", null)
+        .select("room_code")
+        .maybeSingle<{ room_code: string | null }>();
+      if (res.error) {
+        if (res.error.code === "23505") continue; // code collision, try another
+        throw new Error(`room code: ${res.error.message}`);
+      }
+      // No row back means another player joining at the same instant won the race,
+      // so take whatever they settled on rather than looping against them.
+      game.room_code =
+        res.data?.room_code ??
+        (await db.from("games").select("room_code").eq("id", game.id).maybeSingle<{ room_code: string | null }>()).data?.room_code ??
+        null;
+    }
 
     await maybeMigrateHost(await loadCore(game.id), Date.now());
     await touch(game.id);
@@ -481,8 +507,14 @@ export const actions: Record<string, Action> = {
     if (core.game.status === "voting") {
       const voting = await currentRound(core.game);
       if (voting) {
-        const moved = await db.rpc("advance_vote_category", { p_round_id: voting.id });
-        movedOn = !moved.error && typeof moved.data === "number" && moved.data !== voting.vote_category_index;
+        if (voting.vote_ends_at && now > Date.parse(voting.vote_ends_at)) {
+          // The clock ran out: score it without waiting on the host.
+          await settleRound(core, voting);
+          movedOn = true;
+        } else {
+          const moved = await db.rpc("advance_vote_category", { p_round_id: voting.id });
+          movedOn = !moved.error && typeof moved.data === "number" && moved.data !== voting.vote_category_index;
+        }
       }
     }
     if ((hostChanged || movedOn) && !ended) await touch(gameId);
@@ -688,33 +720,7 @@ export const actions: Record<string, Action> = {
     requireStatus(m, "voting");
     const round = await currentRound(m.game);
     if (!round) throw new HttpError(409, "No round to score");
-    const db = admin();
-    const [answers, votes] = await Promise.all([
-      db.from("answers").select("*").eq("round_id", round.id).returns<AnswerRow[]>(),
-      db
-        .from("votes")
-        .select("answer_id, voter_player_id, approve, answers!inner(round_id)")
-        .eq("answers.round_id", round.id)
-        .returns<VoteRow[]>(),
-    ]);
-    const scores = computeRoundScores(
-      check(answers, "answers").map((a) => ({
-        id: a.id,
-        playerId: a.player_id,
-        category: a.category,
-        normalized: a.normalized,
-        autoValid: a.auto_valid,
-        hostVerdict: a.host_verdict,
-      })),
-      check(votes, "votes").map((v) => ({ answerId: v.answer_id, approve: v.approve })),
-      // With only two players nobody can outvote the author, so the single opponent's 👎 decides.
-      m.players.length,
-    );
-    const { error } = await db.rpc("apply_round_scores", {
-      p_round_id: round.id,
-      p_results: scores.map((s) => ({ id: s.id, is_valid: s.isValid, points: s.points })),
-    });
-    if (error) throw new Error(`apply_round_scores: ${error.message}`);
+    await settleRound(m, round);
     return buildState(user, m.game.id);
   },
 
@@ -753,7 +759,7 @@ async function addPlayer(gameId: string, user: SessionUser): Promise<void> {
       { onConflict: "game_id,user_id" },
     ),
     db.from("profiles").upsert(
-      { user_id: user.userId, username: user.username.slice(0, 64), avatar_url: user.avatarUrl, last_seen_at: now },
+      { user_id: user.userId, username: user.username.slice(0, 64), avatar_url: user.avatarUrl, handle: user.handle, last_seen_at: now },
       { onConflict: "user_id" },
     ),
   ]);
@@ -765,6 +771,43 @@ async function claimHostIfFree(game: GameRow, user: SessionUser): Promise<void> 
   if (game.host_user_id) return;
   const { error } = await admin().from("games").update({ host_user_id: user.userId }).eq("id", game.id).is("host_user_id", null);
   if (error) throw new Error(`host: ${error.message}`);
+}
+
+/**
+ * Score a round that is sitting in voting.
+ *
+ * The host can call this early through `tally`, but the heartbeat also runs it
+ * once the voting deadline passes -- otherwise a host who closed the tab leaves
+ * everyone stuck on the voting screen with no way forward.
+ */
+async function settleRound(core: Core, round: RoundRow): Promise<void> {
+  const db = admin();
+  const [answers, votes] = await Promise.all([
+    db.from("answers").select("*").eq("round_id", round.id).returns<AnswerRow[]>(),
+    db
+      .from("votes")
+      .select("answer_id, voter_player_id, approve, answers!inner(round_id)")
+      .eq("answers.round_id", round.id)
+      .returns<VoteRow[]>(),
+  ]);
+  const scores = computeRoundScores(
+    check(answers, "answers").map((a) => ({
+      id: a.id,
+      playerId: a.player_id,
+      category: a.category,
+      normalized: a.normalized,
+      autoValid: a.auto_valid,
+      hostVerdict: a.host_verdict,
+    })),
+    check(votes, "votes").map((v) => ({ answerId: v.answer_id, approve: v.approve })),
+    // With only two players nobody can outvote the author, so the single opponent's 👎 decides.
+    core.players.length,
+  );
+  const { error } = await db.rpc("apply_round_scores", {
+    p_round_id: round.id,
+    p_results: scores.map((s) => ({ id: s.id, is_valid: s.isValid, points: s.points })),
+  });
+  if (error) throw new Error(`apply_round_scores: ${error.message}`);
 }
 
 async function votableAnswer(m: Member, body: Body): Promise<AnswerRow> {

@@ -12,7 +12,16 @@ const OFFSET_SAMPLE_TTL_MS = 60_000;
 export type CallGame = (
   action: string,
   body?: Record<string, unknown>,
-  opts?: { silent?: boolean },
+  opts?: {
+    silent?: boolean;
+    /**
+     * Paint the expected result straight away instead of waiting out the round
+     * trip. The server's reply still overwrites it, so this only has to be close
+     * enough to keep the button from feeling stuck; if the call fails, the next
+     * poll puts the real state back.
+     */
+    optimistic?: (current: GameState) => GameState;
+  },
 ) => Promise<GameState | null>;
 
 /** `token` is the Discord Activity session token; browser players authenticate with a cookie instead. */
@@ -31,6 +40,10 @@ export function useGame(token: string | null, initial: GameState) {
     async (action, body = {}, opts = {}) => {
       const id = ++seq.current;
       const sentAt = Date.now();
+      // Show the expected result before the request goes out. Every action costs a
+      // full round trip to the API and several queries behind it, which through the
+      // Discord proxy is long enough for a tap to feel ignored.
+      if (opts.optimistic) setState((current) => opts.optimistic!(current));
       try {
         const next = await postJson<GameState>(`/api/game/${action}`, { ...body, gameId }, token ?? undefined);
         const receivedAt = Date.now();

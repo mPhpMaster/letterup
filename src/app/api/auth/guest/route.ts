@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     userId: previousId ?? `guest-${randomUUID()}`,
     username: name,
     avatarUrl: null,
+    handle: null,
     kind: "guest",
   };
   return Response.json({ token: await createSession(user), user });

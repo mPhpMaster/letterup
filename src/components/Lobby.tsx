@@ -28,13 +28,17 @@ const CATEGORY_ICON: Record<string, IconName> = {
 };
 
 export function Lobby() {
-  const { state, me, isHost, hostName, participantIds, call, openProfile, openFriends, copyInvite, leaveRoom } = useGameContext();
+  const { state, me, isHost, hostName, participantIds, call, openProfile, openFriends, copyInvite, openDiscordInvite, leaveRoom } =
+    useGameContext();
   const { t, locale } = useI18n();
   const settings = state.settings;
   const players = state.players;
   const readyCount = players.filter((p) => p.ready || p.isHost).length;
 
-  const update = (patch: Partial<SettingsView>) => void call("settings", { patch });
+  // Chips and toggles used to sit unchanged until the server answered; show the new
+  // setting straight away and let the reply confirm it.
+  const update = (patch: Partial<SettingsView>) =>
+    void call("settings", { patch }, { optimistic: (s) => ({ ...s, settings: { ...s.settings, ...patch } }) });
   const toggleCategory = (id: string) => {
     const on = settings.categories.includes(id);
     if (on && settings.categories.length === 1) return;
@@ -57,6 +61,14 @@ export function Lobby() {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {/* Inside the Activity, Discord's own dialog is the shortest way to pull in
+            someone who is already in the server. */}
+        {openDiscordInvite && (
+          <button type="button" className="btn btn-discord min-w-[140px] flex-1 btn-sm" onClick={openDiscordInvite}>
+            <Icon name="userPlus" size={16} />
+            {t("lobby.inviteDiscord")}
+          </button>
+        )}
         <button type="button" className="btn btn-outline min-w-[140px] flex-1 btn-sm" onClick={openFriends}>
           <Icon name="userPlus" size={16} />
           {t("lobby.inviteFriends")}
@@ -193,7 +205,22 @@ export function Lobby() {
         </>
       ) : (
         <>
-          <button type="button" className={`btn ${me?.ready ? "btn-mint" : "btn-primary"}`} onClick={() => void call("ready", { ready: !me?.ready })}>
+          <button
+            type="button"
+            className={`btn ${me?.ready ? "btn-mint" : "btn-primary"}`}
+            onClick={() =>
+              void call(
+                "ready",
+                { ready: !me?.ready },
+                {
+                  optimistic: (s) => ({
+                    ...s,
+                    players: s.players.map((p) => (p.id === s.me.playerId ? { ...p, ready: !me?.ready } : p)),
+                  }),
+                },
+              )
+            }
+          >
             <Icon name={me?.ready ? "checkCircle" : "check"} size={18} />
             {me?.ready ? t("lobby.readyOn") : t("lobby.imReady")}
           </button>
