@@ -5,15 +5,18 @@ import type { DiscordSDK } from "@discord/embedded-app-sdk";
 import { useI18n } from "@/i18n/I18nProvider";
 import { ApiError, getJson, postJson } from "@/lib/api";
 import { bootDiscord, isEmbeddedInDiscord, type BootStep } from "@/lib/discord";
-import type { GameState, ProfileView, SessionUser } from "@/lib/types";
+import type { GameState, ProfileView, RoomSummary, SessionUser } from "@/lib/types";
 import { useGame } from "@/hooks/useGame";
 import { useSocial } from "@/hooks/useSocial";
+import { AdminPanel } from "./AdminPanel";
 import { GameContext, type GameContextValue } from "./GameContext";
 import { FriendsDrawer } from "./FriendsDrawer";
 import { Icon } from "./Icon";
+import { Leaderboard } from "./Leaderboard";
 import { Login } from "./Login";
 import { ProfileModal } from "./ProfileModal";
 import { RoomChoice } from "./RoomChoice";
+import { TextPrompt } from "./TextPrompt";
 import { Lobby } from "./Lobby";
 import { RoundPlay } from "./RoundPlay";
 import { Voting } from "./Voting";
@@ -28,14 +31,34 @@ type Phase =
   | { kind: "error"; message: string }
   | { kind: "game"; token: string | null; state: GameState; sdk?: DiscordSDK };
 
+/** Modals shared by the home screen and the in-game screen. */
+type Overlay =
+  | { kind: "leaderboard" }
+  | { kind: "admin" }
+  | { kind: "suggest" }
+  | { kind: "report"; userId: string; username: string }
+  | { kind: "ban"; userId: string; username: string }
+  | { kind: "password"; code: string; error?: string | null }
+  | null;
+
 export default function App() {
   const { t, setLocale, hasStoredLocale } = useI18n();
   const [phase, setPhase] = useState<Phase>({ kind: "booting", step: "connecting" });
+  const [isAdmin, setIsAdmin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [overlay, setOverlay] = useState<Overlay>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ProfileView | null>(null);
   const started = useRef(false);
 
   const roomFromUrl = () => new URLSearchParams(window.location.search).get("room")?.toUpperCase() ?? "";
+
+  const flash = useCallback((message: string) => {
+    setNotice(message);
+    setTimeout(() => setNotice(null), 2600);
+  }, []);
 
   const enterGame = useCallback((state: GameState, token: string | null, sdk?: DiscordSDK) => {
     if (state.game.roomCode) {
@@ -58,6 +81,8 @@ export default function App() {
           if (!hasStoredLocale() && discord.locale?.toLowerCase().startsWith("ar")) setLocale("ar");
           setPhase({ kind: "booting", step: "joining" });
           const state = await postJson<GameState>("/api/game/join", { instanceId: discord.instanceId }, discord.token);
+          const me = await getJson<{ isAdmin: boolean }>("/api/auth/me", discord.token).catch(() => ({ isAdmin: false }));
+          setIsAdmin(me.isAdmin);
           enterGame(state, discord.token, discord.sdk);
         } catch (err) {
           console.error(err);
@@ -67,8 +92,12 @@ export default function App() {
       }
 
       const authError = new URLSearchParams(window.location.search).get("error");
-      const { user } = await getJson<{ user: SessionUser | null }>("/api/auth/me").catch(() => ({ user: null }));
-      if (!user) {
+      const me = await getJson<{ user: SessionUser | null; isAdmin: boolean }>("/api/auth/me").catch(() => ({
+        user: null,
+        isAdmin: false,
+      }));
+      setIsAdmin(me.isAdmin);
+      if (!me.user) {
         setPhase({ kind: "login", error: authError });
         return;
       }
@@ -78,18 +107,21 @@ export default function App() {
           enterGame(await postJson<GameState>("/api/game/joinCode", { code }), null);
           return;
         } catch (err) {
-          setJoinError(err instanceof ApiError ? err.message : String(err));
+          if (err instanceof ApiError && err.status === 401) setOverlay({ kind: "password", code });
+          else setJoinError(err instanceof ApiError ? err.message : String(err));
         }
       }
-      setPhase({ kind: "rooms", user });
+      setPhase({ kind: "rooms", user: me.user });
     })();
   }, [enterGame, hasStoredLocale, setLocale]);
 
-  const createRoom = async () => {
+  const token = phase.kind === "game" ? phase.token : null;
+
+  const createRoom = async (password?: string) => {
     setBusy(true);
     setJoinError(null);
     try {
-      enterGame(await postJson<GameState>("/api/game/createRoom", {}), null);
+      enterGame(await postJson<GameState>("/api/game/createRoom", { password }), null);
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -97,25 +129,199 @@ export default function App() {
     }
   };
 
-  const joinRoom = async (code: string) => {
+  const joinRoom = async (code: string, password?: string) => {
     setBusy(true);
     setJoinError(null);
     try {
-      enterGame(await postJson<GameState>("/api/game/joinCode", { code }), null);
+      enterGame(await postJson<GameState>("/api/game/joinCode", { code, password }), null);
+      setOverlay(null);
     } catch (err) {
-      setJoinError(err instanceof Error ? err.message : String(err));
+      if (err instanceof ApiError && err.status === 401) {
+        setOverlay({ kind: "password", code, error: password ? t("rooms.passwordWrong") : null });
+      } else {
+        setJoinError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setBusy(false);
     }
   };
 
-  if (phase.kind === "game") return <GameScreen token={phase.token} initial={phase.state} sdk={phase.sdk} />;
+  // Profile card contents are fetched on demand.
+  useEffect(() => {
+    if (!profileId) {
+      setProfile(null);
+      return;
+    }
+    let active = true;
+    postJson<ProfileView>("/api/social/profile", { userId: profileId }, token ?? undefined)
+      .then((p) => active && setProfile(p))
+      .catch(() => active && setProfileId(null));
+    return () => {
+      active = false;
+    };
+  }, [profileId, token]);
+
+  const sendReport = async (userId: string, reason: string) => {
+    try {
+      await postJson("/api/social/report", { userId, reason }, token ?? undefined);
+      flash(t("report.sent"));
+    } catch (err) {
+      flash(err instanceof Error ? err.message : t("errors.generic"));
+    }
+    setOverlay(null);
+  };
+
+  const sendSuggestion = async (body: string) => {
+    try {
+      await postJson("/api/social/suggest", { body }, token ?? undefined);
+      flash(t("suggest.sent"));
+    } catch (err) {
+      flash(err instanceof Error ? err.message : t("errors.generic"));
+    }
+    setOverlay(null);
+  };
+
+  const setBan = async (userId: string, banned: boolean, reason?: string) => {
+    try {
+      await postJson(`/api/admin/${banned ? "ban" : "unban"}`, { userId, reason }, token ?? undefined);
+      setProfile((p) => (p && p.userId === userId ? { ...p, isBanned: banned, banReason: reason ?? null } : p));
+    } catch (err) {
+      flash(err instanceof Error ? err.message : t("errors.generic"));
+    }
+    setOverlay(null);
+  };
+
+  const overlays = (
+    <>
+      {overlay?.kind === "leaderboard" && (
+        <Leaderboard
+          token={token}
+          myUserId={phase.kind === "game" ? phase.state.me.userId : null}
+          onClose={() => setOverlay(null)}
+          onOpenProfile={(userId) => {
+            setOverlay(null);
+            setProfileId(userId);
+          }}
+          onReport={(userId, username) => setOverlay({ kind: "report", userId, username })}
+        />
+      )}
+      {overlay?.kind === "admin" && <AdminPanel token={token} onClose={() => setOverlay(null)} />}
+      {overlay?.kind === "suggest" && (
+        <TextPrompt
+          title={t("suggest.title")}
+          subtitle={t("suggest.subtitle")}
+          placeholder={t("suggest.placeholder")}
+          submitLabel={t("suggest.send")}
+          multiline
+          onSubmit={sendSuggestion}
+          onClose={() => setOverlay(null)}
+        />
+      )}
+      {overlay?.kind === "report" && (
+        <TextPrompt
+          title={t("report.title", { name: overlay.username })}
+          subtitle={t("report.subtitle")}
+          placeholder={t("report.placeholder")}
+          submitLabel={t("report.send")}
+          multiline
+          maxLength={1000}
+          onSubmit={(reason) => void sendReport(overlay.userId, reason)}
+          onClose={() => setOverlay(null)}
+        />
+      )}
+      {overlay?.kind === "ban" && (
+        <TextPrompt
+          title={`${t("admin.ban")} — ${overlay.username}`}
+          placeholder={t("admin.banReason")}
+          submitLabel={t("admin.ban")}
+          maxLength={500}
+          onSubmit={(reason) => void setBan(overlay.userId, true, reason)}
+          onClose={() => setOverlay(null)}
+        />
+      )}
+      {overlay?.kind === "password" && (
+        <TextPrompt
+          title={t("rooms.passwordTitle")}
+          subtitle={overlay.code}
+          placeholder={t("rooms.passwordPlaceholder")}
+          submitLabel={t("rooms.passwordSubmit")}
+          password
+          maxLength={64}
+          busy={busy}
+          error={overlay.error}
+          onSubmit={(value) => void joinRoom(overlay.code, value)}
+          onClose={() => setOverlay(null)}
+        />
+      )}
+      {profileId && (
+        <ProfileModal
+          profile={profile}
+          loading={!profile}
+          myRoomCode={phase.kind === "game" ? phase.state.game.roomCode : null}
+          isAdmin={isAdmin}
+          onClose={() => setProfileId(null)}
+          onToggleFollow={(userId, follow) => {
+            void postJson("/api/social/follow", { userId, follow }, token ?? undefined).catch(() => {});
+            setProfile((p) => (p ? { ...p, isFollowing: follow } : p));
+          }}
+          onJoinRoom={(code) => {
+            window.location.href = `/?room=${code}`;
+          }}
+          onReport={(userId, username) => setOverlay({ kind: "report", userId, username })}
+          onBan={(userId, username) => setOverlay({ kind: "ban", userId, username })}
+          onUnban={(userId) => void setBan(userId, false)}
+        />
+      )}
+      {notice && (
+        <div role="status" className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-w-md rounded-[16px] border-2 border-line bg-card px-4 py-3 text-center text-sm font-semibold shadow-lg">
+          <span dir="auto">{notice}</span>
+        </div>
+      )}
+    </>
+  );
+
+  if (phase.kind === "game") {
+    return (
+      <>
+        <GameScreen
+          token={phase.token}
+          initial={phase.state}
+          sdk={phase.sdk}
+          isAdmin={isAdmin}
+          onOpenProfile={setProfileId}
+          onOpenLeaderboard={() => setOverlay({ kind: "leaderboard" })}
+          onOpenAdmin={() => setOverlay({ kind: "admin" })}
+        />
+        {overlays}
+      </>
+    );
+  }
+
   if (phase.kind === "login") return <Login error={phase.error} next={roomFromUrl() ? `/?room=${roomFromUrl()}` : "/"} />;
+
   if (phase.kind === "rooms") {
     return (
-      <RoomChoice user={phase.user} onCreate={createRoom} onJoin={joinRoom} busy={busy} error={joinError} initialCode={roomFromUrl()}>
-        <PendingInvites onJoin={joinRoom} />
-      </RoomChoice>
+      <>
+        <RoomChoice
+          user={phase.user}
+          token={null}
+          isAdmin={isAdmin}
+          onCreate={(password) => void createRoom(password)}
+          onJoin={(code) => void joinRoom(code)}
+          onJoinRoom={(room: RoomSummary) =>
+            room.hasPassword ? setOverlay({ kind: "password", code: room.roomCode }) : void joinRoom(room.roomCode)
+          }
+          onOpenLeaderboard={() => setOverlay({ kind: "leaderboard" })}
+          onOpenSuggest={() => setOverlay({ kind: "suggest" })}
+          onOpenAdmin={() => setOverlay({ kind: "admin" })}
+          busy={busy}
+          error={joinError}
+          initialCode={roomFromUrl()}
+        >
+          <PendingInvites onJoin={(code) => void joinRoom(code)} />
+        </RoomChoice>
+        {overlays}
+      </>
     );
   }
 
@@ -204,7 +410,23 @@ function useDiscordParticipants(sdk: DiscordSDK | undefined, onChange: () => voi
   return ids;
 }
 
-function GameScreen({ token, initial, sdk }: { token: string | null; initial: GameState; sdk?: DiscordSDK }) {
+function GameScreen({
+  token,
+  initial,
+  sdk,
+  isAdmin,
+  onOpenProfile,
+  onOpenLeaderboard,
+  onOpenAdmin,
+}: {
+  token: string | null;
+  initial: GameState;
+  sdk?: DiscordSDK;
+  isAdmin: boolean;
+  onOpenProfile: (userId: string) => void;
+  onOpenLeaderboard: () => void;
+  onOpenAdmin: () => void;
+}) {
   const { t } = useI18n();
   const { state, offset, error, clearError, call, refresh } = useGame(token, initial);
   const participantIds = useDiscordParticipants(sdk, refresh);
@@ -212,30 +434,12 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
 
   const [showFriends, setShowFriends] = useState(false);
   const [goHomeOpen, setGoHomeOpen] = useState(false);
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<ProfileView | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const flash = useCallback((message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 2200);
   }, []);
-
-  useEffect(() => {
-    if (!profileId) {
-      setProfile(null);
-      return;
-    }
-    let active = true;
-    social
-      .loadProfile(profileId)
-      .then((p) => active && setProfile(p))
-      .catch(() => active && setProfileId(null));
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadProfile identity changes every render
-  }, [profileId]);
 
   const inviteUrl = state.game.roomCode ? `${window.location.origin}/?room=${state.game.roomCode}` : null;
   const copyInvite = inviteUrl
@@ -268,13 +472,13 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
       participantIds,
       call,
       refresh,
-      openProfile: setProfileId,
+      openProfile: onOpenProfile,
       openFriends: () => setShowFriends(true),
       copyInvite,
       leaveRoom,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- leaveRoom closes over stable values
-  }, [state, offset, participantIds, call, refresh, copyInvite, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- leaveRoom/copyInvite close over stable values
+  }, [state, offset, participantIds, call, refresh, copyInvite, onOpenProfile, t]);
 
   const { status } = state.game;
   const inGame = status === "playing" || status === "voting" || status === "results";
@@ -300,6 +504,9 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
               {t("header.round", { current: state.game.currentRound, total: state.settings.totalRounds })}
             </span>
           )}
+          <button type="button" className="btn btn-ghost btn-icon shrink-0" onClick={onOpenLeaderboard} aria-label={t("leaderboard.open")}>
+            <Icon name="crown" size={17} />
+          </button>
           <button type="button" className="btn btn-ghost btn-icon relative shrink-0" onClick={() => setShowFriends(true)} aria-label={t("header.friends")}>
             <Icon name="users" size={17} />
             {social.social.invites.length > 0 && (
@@ -308,6 +515,11 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
               </span>
             )}
           </button>
+          {isAdmin && (
+            <button type="button" className="btn btn-ghost btn-icon shrink-0" onClick={onOpenAdmin} aria-label={t("admin.open")}>
+              <Icon name="sealCheck" size={17} />
+            </button>
+          )}
           {inGame && ctx.isHost && (
             <ConfirmButton onConfirm={() => void call("lobby")}>
               <Icon name="replay" size={15} />
@@ -340,23 +552,7 @@ function GameScreen({ token, initial, sdk }: { token: string | null; initial: Ga
             }}
             onOpenProfile={(userId) => {
               setShowFriends(false);
-              setProfileId(userId);
-            }}
-          />
-        )}
-
-        {profileId && (
-          <ProfileModal
-            profile={profile}
-            loading={!profile}
-            myRoomCode={state.game.roomCode}
-            onClose={() => setProfileId(null)}
-            onToggleFollow={(userId, follow) => {
-              void social.follow(userId, follow);
-              setProfile((p) => (p ? { ...p, isFollowing: follow } : p));
-            }}
-            onJoinRoom={(code) => {
-              window.location.href = `/?room=${code}`;
+              onOpenProfile(userId);
             }}
           />
         )}

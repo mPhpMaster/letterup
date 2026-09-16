@@ -1,4 +1,6 @@
-import { HttpError } from "@/server/game";
+import { createReport, createSuggestion, isAdmin } from "@/server/admin";
+import { getLeaderboard, listRooms } from "@/server/discovery";
+import { HttpError } from "@/server/errors";
 import { readSession } from "@/server/session";
 import { declineInvite, getProfile, getSocialState, inviteToRoom, searchProfiles, setFollow } from "@/server/social";
 import type { SessionUser } from "@/lib/types";
@@ -32,6 +34,21 @@ const actions: Record<string, (user: SessionUser, body: Body) => Promise<unknown
   },
   async search(user, body) {
     return { results: await searchProfiles(user, str(body.query, "query", 64)) };
+  },
+  /** Home screen: open rooms and the global ranking. */
+  async rooms() {
+    return { rooms: await listRooms() };
+  },
+  async leaderboard(user) {
+    return { entries: await getLeaderboard(), isAdmin: isAdmin(user.userId) };
+  },
+  async suggest(user, body) {
+    await createSuggestion(user, str(body.body, "body", 2000));
+    return { ok: true };
+  },
+  async report(user, body) {
+    await createReport(user, str(body.userId, "userId", 64), str(body.reason, "reason", 1000));
+    return { ok: true };
   },
   async dismissInvite(user, body) {
     await declineInvite(user, str(body.inviteId, "inviteId", 40));

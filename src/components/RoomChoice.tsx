@@ -2,25 +2,38 @@
 
 import { useState, type FormEvent } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { SessionUser } from "@/lib/types";
+import type { RoomSummary, SessionUser } from "@/lib/types";
 import { Icon } from "./Icon";
+import { RoomList } from "./RoomList";
 import { Avatar, LanguageToggle, Spinner } from "./ui";
 
 const sanitize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
 
-/** After signing in: start a new room or join one with a code. */
+/** Home screen: open rooms, create or join, plus leaderboard, suggestions and (for admins) the panel. */
 export function RoomChoice({
   user,
+  token,
+  isAdmin,
   onCreate,
   onJoin,
+  onJoinRoom,
+  onOpenLeaderboard,
+  onOpenSuggest,
+  onOpenAdmin,
   busy,
   error,
   initialCode = "",
   children,
 }: {
   user: SessionUser;
-  onCreate: () => void;
+  token: string | null;
+  isAdmin: boolean;
+  onCreate: (password?: string) => void;
   onJoin: (code: string) => void;
+  onJoinRoom: (room: RoomSummary) => void;
+  onOpenLeaderboard: () => void;
+  onOpenSuggest: () => void;
+  onOpenAdmin: () => void;
   busy: boolean;
   error?: string | null;
   initialCode?: string;
@@ -28,6 +41,8 @@ export function RoomChoice({
 }) {
   const { t } = useI18n();
   const [code, setCode] = useState(sanitize(initialCode));
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -39,18 +54,42 @@ export function RoomChoice({
       <header className="flex items-center gap-2 py-3">
         <Avatar name={user.username} url={user.avatarUrl} size={32} />
         <span className="min-w-0 flex-1 truncate text-sm text-muted">{t("room.signedInAs", { name: user.username })}</span>
+        {isAdmin && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenAdmin}>
+            <Icon name="sealCheck" size={15} />
+            {t("admin.open")}
+          </button>
+        )}
         <LanguageToggle />
       </header>
 
-      <main className="flex flex-1 flex-col justify-center gap-4 pb-12">
+      <main className="flex flex-1 flex-col gap-4 pb-10">
         <h1 className="headline text-center text-[26px]">{t("room.title")}</h1>
 
         {children}
 
-        <button type="button" className="btn btn-primary text-base" onClick={onCreate} disabled={busy}>
-          <Icon name="plusCircle" size={20} />
-          {busy ? t("room.creating") : t("room.createCta")}
-        </button>
+        <div className="flex flex-col gap-2">
+          <button type="button" className="btn btn-primary text-base" onClick={() => onCreate(password || undefined)} disabled={busy}>
+            <Icon name="plusCircle" size={20} />
+            {busy ? t("room.creating") : t("room.createCta")}
+          </button>
+
+          {showPassword ? (
+            <input
+              className="input"
+              type="password"
+              dir="auto"
+              maxLength={64}
+              placeholder={t("rooms.setPasswordPlaceholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          ) : (
+            <button type="button" className="text-[12px] font-semibold text-muted hover:underline" onClick={() => setShowPassword(true)}>
+              🔒 {t("rooms.setPassword")}
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center gap-2.5 text-xs font-bold text-sand">
           <span className="h-0.5 flex-1 bg-line" />
@@ -85,6 +124,19 @@ export function RoomChoice({
             {error}
           </p>
         )}
+
+        <RoomList token={token} onJoin={onJoinRoom} />
+
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={onOpenLeaderboard}>
+            <Icon name="crown" size={15} />
+            {t("leaderboard.open")}
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm flex-1" onClick={onOpenSuggest}>
+            <Icon name="share" size={15} />
+            {t("suggest.open")}
+          </button>
+        </div>
       </main>
     </div>
   );

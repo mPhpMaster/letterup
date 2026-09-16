@@ -1,4 +1,5 @@
-import { actions, HttpError } from "@/server/game";
+import { HttpError } from "@/server/errors";
+import { actions } from "@/server/game";
 import { readSession } from "@/server/session";
 
 export const dynamic = "force-dynamic";

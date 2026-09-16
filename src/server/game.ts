@@ -1,5 +1,8 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { admin } from "./supabase-admin";
+import { HttpError } from "./errors";
+import { assertNotBanned } from "./admin";
+import { hashPassword, verifyPassword } from "./passwords";
 import { CATEGORY_IDS } from "@/lib/categories";
 import { normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
 import { computeRoundScores } from "@/lib/scoring";
@@ -10,11 +13,7 @@ const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const newRoomCode = () =>
   Array.from({ length: 5 }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join("");
 
-export class HttpError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-  }
-}
+export { HttpError } from "./errors";
 
 const ONLINE_MS = 20_000; // clients heartbeat every ~5s via `state`
 const HOST_TIMEOUT_MS = 30_000; // hand host to someone else after this long away
@@ -36,6 +35,7 @@ interface GameRow {
   version: number;
   room_code: string | null;
   origin: GameOrigin;
+  password_hash: string | null;
 }
 interface SettingsRow {
   game_id: string;
@@ -318,6 +318,7 @@ export const actions: Record<string, Action> = {
     if (typeof instanceId !== "string" || !/^[\w:-]{1,200}$/.test(instanceId)) {
       throw new HttpError(400, "Invalid instanceId");
     }
+    await assertNotBanned(user.userId);
     // Guests (local test mode) live in their own namespace and can never enter a real Discord instance.
     const key = user.kind === "guest" ? `guest:${instanceId}` : instanceId;
     const db = admin();
@@ -347,15 +348,21 @@ export const actions: Record<string, Action> = {
     return buildState(user, game.id);
   },
 
-  /** Browser play: open a fresh room with a short code to share. */
-  async createRoom(user, _body) {
+  /** Browser play: open a fresh room with a short code to share, optionally password protected. */
+  async createRoom(user, body) {
+    await assertNotBanned(user.userId);
+    const rawPassword = typeof body.password === "string" ? body.password.trim() : "";
+    if (rawPassword && (rawPassword.length < 3 || rawPassword.length > 64)) {
+      throw new HttpError(400, "Password must be 3–64 characters");
+    }
+    const passwordHash = rawPassword ? await hashPassword(rawPassword) : null;
     const db = admin();
     let game: GameRow | null = null;
     for (let attempt = 0; attempt < 5 && !game; attempt++) {
       const code = newRoomCode();
       const res = await db
         .from("games")
-        .insert({ instance_id: `web:${code}`, room_code: code, origin: "web", host_user_id: user.userId })
+        .insert({ instance_id: `web:${code}`, room_code: code, origin: "web", host_user_id: user.userId, password_hash: passwordHash })
         .select("*")
         .maybeSingle<GameRow>();
       if (res.error) {
@@ -373,13 +380,25 @@ export const actions: Record<string, Action> = {
     return buildState(user, game.id);
   },
 
-  /** Browser play: join an existing room by its short code. */
+  /** Browser play: join an existing room by its short code (and password, if it has one). */
   async joinCode(user, body) {
+    await assertNotBanned(user.userId);
     const raw = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
     if (!/^[A-Z0-9]{4,8}$/.test(raw)) throw new HttpError(400, "Invalid room code");
     const db = admin();
     const game = check(await db.from("games").select("*").eq("room_code", raw).maybeSingle<GameRow>(), "room");
     if (game.status === "finished") throw new HttpError(409, "That game has already finished");
+
+    if (game.password_hash) {
+      const already = await db.from("players").select("id").eq("game_id", game.id).eq("user_id", user.userId).is("kicked_at", null).maybeSingle();
+      if (already.error) throw new Error(`join: ${already.error.message}`);
+      if (!already.data) {
+        const supplied = typeof body.password === "string" ? body.password : "";
+        // 401 tells the client to ask for the room password.
+        if (!supplied) throw new HttpError(401, "This room needs a password");
+        if (!(await verifyPassword(supplied, game.password_hash))) throw new HttpError(401, "Wrong password");
+      }
+    }
     await addPlayer(game.id, user);
     await claimHostIfFree(game, user);
     await touch(game.id);

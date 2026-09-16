@@ -100,6 +100,14 @@ export interface ProfileView {
   isFollowedBy: boolean;
   /** Room they are currently playing in, when it can still be joined. */
   currentRoomCode: string | null;
+  /** Share of finished games won, 0–100. */
+  winRate: number;
+  averagePerGame: number;
+  followers: number;
+  following: number;
+  lastSeenAt: number;
+  isBanned: boolean;
+  banReason: string | null;
 }
 
 export interface FriendView {
@@ -121,6 +129,56 @@ export interface InviteView {
   fromUsername: string;
   fromAvatarUrl: string | null;
   createdAt: number;
+}
+
+export interface RoomSummary {
+  roomCode: string;
+  status: GameStatus;
+  currentRound: number;
+  totalRounds: number;
+  playerCount: number;
+  hasPassword: boolean;
+  hostUsername: string | null;
+  updatedAt: number;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  totalPoints: number;
+  wins: number;
+  gamesPlayed: number;
+  roundsPlayed: number;
+  bestScore: number;
+  averagePerRound: number;
+}
+
+export interface AdminSuggestion {
+  id: string;
+  userId: string;
+  username: string;
+  body: string;
+  createdAt: number;
+  handled: boolean;
+}
+
+export interface AdminReport {
+  id: string;
+  reporterId: string;
+  reporterName: string;
+  reportedUserId: string;
+  reportedName: string;
+  reason: string;
+  createdAt: number;
+  handled: boolean;
+}
+
+export interface AdminState {
+  suggestions: AdminSuggestion[];
+  reports: AdminReport[];
+  banned: { userId: string; username: string; avatarUrl: string | null; bannedAt: number; reason: string | null }[];
 }
 
 export interface SearchResultView {

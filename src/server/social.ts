@@ -1,5 +1,5 @@
 import { admin } from "./supabase-admin";
-import { HttpError } from "./game";
+import { HttpError } from "./errors";
 import type { FriendView, InviteView, ProfileView, SearchResultView, SessionUser, SocialState } from "@/lib/types";
 
 const ONLINE_MS = 60_000;
@@ -15,6 +15,8 @@ interface ProfileRow {
   total_points: number;
   best_score: number;
   last_seen_at: string;
+  banned_at?: string | null;
+  ban_reason?: string | null;
 }
 
 /** Keeps the cross-game profile in step with the Discord display name/avatar. */
@@ -64,7 +66,15 @@ async function joinableRooms(userIds: string[]): Promise<Map<string, string | nu
 
 function toProfileView(
   row: ProfileRow,
-  opts: { isMe: boolean; isFollowing: boolean; isFollowedBy: boolean; roomCode: string | null; now: number },
+  opts: {
+    isMe: boolean;
+    isFollowing: boolean;
+    isFollowedBy: boolean;
+    roomCode: string | null;
+    now: number;
+    followers?: number;
+    following?: number;
+  },
 ): ProfileView {
   return {
     userId: row.user_id,
@@ -76,6 +86,13 @@ function toProfileView(
     totalPoints: row.total_points,
     bestScore: row.best_score,
     averagePerRound: row.rounds_played > 0 ? Math.round(row.total_points / row.rounds_played) : 0,
+    averagePerGame: row.games_played > 0 ? Math.round(row.total_points / row.games_played) : 0,
+    winRate: row.games_played > 0 ? Math.round((row.wins / row.games_played) * 100) : 0,
+    followers: opts.followers ?? 0,
+    following: opts.following ?? 0,
+    lastSeenAt: Date.parse(row.last_seen_at),
+    isBanned: !!row.banned_at,
+    banReason: row.ban_reason ?? null,
     online: isOnline(row, opts.now),
     isMe: opts.isMe,
     isFollowing: opts.isFollowing,
@@ -86,11 +103,13 @@ function toProfileView(
 
 export async function getProfile(viewer: SessionUser, targetId: string): Promise<ProfileView> {
   const db = admin();
-  const [row, following, followedBy, rooms] = await Promise.all([
+  const [row, following, followedBy, rooms, followerCount, followingCount] = await Promise.all([
     loadProfile(targetId),
     db.from("follows").select("followee_id").eq("follower_id", viewer.userId).eq("followee_id", targetId).maybeSingle(),
     db.from("follows").select("follower_id").eq("follower_id", targetId).eq("followee_id", viewer.userId).maybeSingle(),
     joinableRooms([targetId]),
+    db.from("follows").select("*", { count: "exact", head: true }).eq("followee_id", targetId),
+    db.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", targetId),
   ]);
   return toProfileView(row, {
     isMe: targetId === viewer.userId,
@@ -98,6 +117,8 @@ export async function getProfile(viewer: SessionUser, targetId: string): Promise
     isFollowedBy: !!followedBy.data,
     roomCode: rooms.get(targetId) ?? null,
     now: Date.now(),
+    followers: followerCount.count ?? 0,
+    following: followingCount.count ?? 0,
   });
 }
 
