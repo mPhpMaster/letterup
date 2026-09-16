@@ -22,7 +22,7 @@ import { RoundPlay } from "./RoundPlay";
 import { Voting } from "./Voting";
 import { RoundResults } from "./RoundResults";
 import { FinalLeaderboard } from "./FinalLeaderboard";
-import { Avatar, ConfirmButton, LanguageToggle, Spinner } from "./ui";
+import { AppHeader, Avatar, ConfirmButton, Spinner } from "./ui";
 
 type Phase =
   | { kind: "booting"; step: BootStep }
@@ -339,7 +339,7 @@ export default function App() {
         />
       )}
       {notice && (
-        <div role="status" className="fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-md rounded-[16px] border-2 border-line bg-card px-4 py-3 text-center text-sm font-semibold shadow-lg">
+        <div role="status" className="animate-rise fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-md rounded-3xl bg-ink px-5 py-3.5 text-center text-sm font-bold text-cream shadow-[0_6px_0_var(--color-ink-deep)]">
           <span dir="auto">{notice}</span>
         </div>
       )}
@@ -402,37 +402,39 @@ export default function App() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 py-6">
-      <div className="flex justify-end">
-        <LanguageToggle />
-      </div>
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-        <span className="headline grid size-[72px] place-items-center rounded-[22px] bg-orange text-[34px] text-white">L</span>
-        {/* The game's name belongs on the splash; the long description sits under it. */}
-        <div>
-          <h1 className="headline text-[28px]">{t("app.short")}</h1>
-          <p className="mt-1 text-[13px] text-muted">{t("app.title")}</p>
-        </div>
-        {phase.kind === "booting" && (
-          <>
-            <Spinner />
-            <p className="text-muted">{t(`boot.${phase.step}`)}</p>
-          </>
-        )}
-        {phase.kind === "error" && (
-          <div className="card w-full text-start">
-            <p className="headline text-pink">{t("boot.failed")}</p>
-            <p className="mt-1 break-words text-sm text-muted" dir={phase.messageKey ? undefined : "ltr"}>
-              {phase.messageKey ? t(phase.messageKey) : phase.message}
-            </p>
-            <p className="mt-3 text-sm text-muted">{t(phase.hintKey ?? "boot.hint")}</p>
-            <button type="button" className="btn btn-primary mt-4 w-full" onClick={() => window.location.reload()}>
-              {t("common.retry")}
-            </button>
+    <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col gap-4 p-3 sm:gap-5 sm:p-5">
+      <AppHeader subtitle={t("app.title")} />
+      <main className="flex flex-1 flex-col items-center justify-center pb-10">
+        <section className="card-pop animate-rise flex w-full max-w-md flex-col items-center gap-5 text-center">
+          <span className="headline animate-pop-letter grid size-24 place-items-center rounded-[30px] bg-accent text-6xl text-ink shadow-[0_10px_0_var(--color-accent-deep)]">
+            L
+          </span>
+          {/* The game's name belongs on the splash; the long description sits under it. */}
+          <div>
+            <h1 className="headline text-4xl text-brand">{t("app.short")}</h1>
+            <p className="kicker mt-1">{t("app.title")}</p>
           </div>
-        )}
-      </div>
-    </main>
+          {phase.kind === "booting" && (
+            <>
+              <Spinner />
+              <p className="animate-pulse-soft headline text-base text-ink/60">{t(`boot.${phase.step}`)}</p>
+            </>
+          )}
+          {phase.kind === "error" && (
+            <div className="w-full rounded-3xl bg-brand/10 p-4 text-start">
+              <p className="headline text-lg text-brand">{t("boot.failed")}</p>
+              <p className="mt-1 text-sm font-semibold break-words text-ink/70" dir={phase.messageKey ? undefined : "ltr"}>
+                {phase.messageKey ? t(phase.messageKey) : phase.message}
+              </p>
+              <p className="mt-3 text-sm text-muted">{t(phase.hintKey ?? "boot.hint")}</p>
+              <button type="button" className="btn btn-brand mt-4 w-full" onClick={() => window.location.reload()}>
+                {t("common.retry")}
+              </button>
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }
 
@@ -442,10 +444,10 @@ function PendingInvites({ onJoin }: { onJoin: (code: string) => void }) {
   const { social, dismissInvite } = useSocial(null, null);
   if (social.invites.length === 0) return null;
   return (
-    <div className="card flex flex-col gap-2">
-      <h2 className="headline text-base">{t("invites.title")}</h2>
+    <div className="card-pop-sm animate-rise flex flex-col gap-2">
+      <h2 className="headline text-lg">💌 {t("invites.title")}</h2>
       {social.invites.map((invite) => (
-        <div key={invite.id} className="flex items-center gap-2.5">
+        <div key={invite.id} className="flex items-center gap-2.5 rounded-2xl bg-cream p-2">
           <Avatar name={invite.fromUsername} url={invite.fromAvatarUrl} size={32} />
           <span className="min-w-0 flex-1 truncate text-sm" dir="auto">
             {t("invites.fromLine", { name: invite.fromUsername })}
@@ -457,8 +459,7 @@ function PendingInvites({ onJoin }: { onJoin: (code: string) => void }) {
           )}
           <button
             type="button"
-            className="btn btn-icon"
-            style={{ background: "transparent", color: "var(--color-sand)" }}
+            className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink/5 text-ink/45 transition-transform active:scale-90"
             aria-label={t("invites.dismiss")}
             onClick={() => void dismissInvite(invite.id)}
           >
@@ -577,52 +578,40 @@ function GameScreen({
 
   return (
     <GameContext.Provider value={ctx}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-[760px] flex-col px-4 pb-6">
-        <header className="flex items-center gap-1.5 border-b-2 border-line py-2.5 sm:gap-2.5 sm:py-3">
-          {/* Tapping the name leaves the game screen — always with a confirmation. */}
-          <button
-            type="button"
-            className="me-auto flex min-w-0 items-center gap-2"
-            onClick={() => setGoHomeOpen(true)}
-            aria-label={t("nav.goHomeTitle")}
-          >
-            <span className="headline grid size-8 shrink-0 place-items-center rounded-[10px] bg-orange text-[17px] text-white sm:size-9 sm:text-[19px]">
-              L
-            </span>
-            <span className="headline hidden truncate text-[17px] min-[430px]:inline sm:text-[19px]">{t("app.short")}</span>
+      <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col gap-4 p-3 pb-8 sm:gap-5 sm:p-5">
+        {/* Tapping the logo leaves the game screen — always with a confirmation. */}
+        <AppHeader
+          subtitle={inGame ? t("header.round", { current: state.game.currentRound, total: state.settings.totalRounds }) : t("app.title")}
+          badge={inGame ? t("header.roundLong", { current: state.game.currentRound, total: state.settings.totalRounds }) : undefined}
+          onLogoClick={() => setGoHomeOpen(true)}
+          logoLabel={t("nav.goHomeTitle")}
+        >
+          <button type="button" className="tool" onClick={onOpenLeaderboard} aria-label={t("leaderboard.open")} title={t("leaderboard.open")}>
+            <Icon name="crown" size={19} />
           </button>
-          {inGame && (
-            <span className="pill text-[11px] whitespace-nowrap sm:text-[12px]" style={{ background: "var(--color-sun)", borderColor: "transparent" }}>
-              {t("header.round", { current: state.game.currentRound, total: state.settings.totalRounds })}
-            </span>
-          )}
-          <button type="button" className="btn btn-ghost btn-icon shrink-0" onClick={onOpenLeaderboard} aria-label={t("leaderboard.open")}>
-            <Icon name="crown" size={17} />
-          </button>
-          <button type="button" className="btn btn-ghost btn-icon relative shrink-0" onClick={() => setShowFriends(true)} aria-label={t("header.friends")}>
-            <Icon name="users" size={17} />
+          <button type="button" className="tool relative" onClick={() => setShowFriends(true)} aria-label={t("header.friends")} title={t("header.friends")}>
+            <Icon name="users" size={19} />
             {social.social.invites.length > 0 && (
-              <span className="absolute -end-1 -top-1 grid size-4 place-items-center rounded-full bg-pink text-[10px] font-bold text-white">
+              <span className="absolute -end-1 -top-1 grid size-5 place-items-center rounded-full bg-brand text-[10px] font-extrabold text-white ring-2 ring-paper">
                 {social.social.invites.length}
               </span>
             )}
           </button>
           {isAdmin && (
-            <button type="button" className="btn btn-ghost btn-icon shrink-0" onClick={onOpenAdmin} aria-label={t("admin.open")}>
-              <Icon name="sealCheck" size={17} />
+            <button type="button" className="tool" onClick={onOpenAdmin} aria-label={t("admin.open")} title={t("admin.open")}>
+              <Icon name="sealCheck" size={19} />
             </button>
           )}
           {inGame && ctx.isHost && (
-            <ConfirmButton onConfirm={() => void call("lobby")}>
-              <Icon name="replay" size={15} />
-              <span className="hidden sm:inline">{t("header.endGame")}</span>
+            <ConfirmButton className="tool gap-1.5 text-xs" onConfirm={() => void call("lobby")}>
+              <Icon name="replay" size={17} />
+              <span className="sr-only">{t("header.endGame")}</span>
             </ConfirmButton>
           )}
-          <LanguageToggle />
-        </header>
+        </AppHeader>
 
         {/* Bottom padding keeps the sticky action buttons clear of the last row on mobile. */}
-        <main className="flex flex-1 flex-col gap-4 pt-4 pb-24">
+        <main className="flex flex-1 flex-col gap-4 pb-24 sm:gap-5">
           {status === "lobby" && <Lobby />}
           {status === "playing" && state.round && <RoundPlay key={state.round.id} />}
           {status === "voting" && state.round && <Voting />}
@@ -651,14 +640,14 @@ function GameScreen({
 
         {goHomeOpen && (
           <div className="modal-backdrop" onClick={() => setGoHomeOpen(false)}>
-            <div className="modal-card max-w-[340px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("nav.goHomeTitle")}>
-              <h3 className="headline text-[19px]">{t("nav.goHomeTitle")}</h3>
+            <div className="modal-card max-w-[360px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("nav.goHomeTitle")}>
+              <h3 className="headline text-xl">{t("nav.goHomeTitle")}</h3>
               <p className="text-sm text-muted">{t("nav.goHomeBody")}</p>
               <div className="flex gap-2">
                 <button type="button" className="btn btn-ghost flex-1" onClick={() => setGoHomeOpen(false)}>
                   {t("nav.stay")}
                 </button>
-                <button type="button" className="btn btn-primary flex-1" onClick={goHome}>
+                <button type="button" className="btn btn-brand flex-1" onClick={goHome}>
                   {t("nav.goHomeConfirm")}
                 </button>
               </div>
@@ -669,13 +658,13 @@ function GameScreen({
         {(error || toast) && (
           <div
             role="alert"
-            className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-[16px] border-2 border-line bg-card px-4 py-3 shadow-lg"
+            className="animate-rise fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-3xl bg-ink px-5 py-3 text-cream shadow-[0_6px_0_var(--color-ink-deep)]"
           >
-            <span className="flex-1 text-sm font-semibold" dir="auto">
+            <span className="flex-1 text-sm font-bold" dir="auto">
               {error ?? toast}
             </span>
             {error && (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={clearError}>
+              <button type="button" className="btn btn-accent btn-sm" onClick={clearError}>
                 {t("common.dismiss")}
               </button>
             )}

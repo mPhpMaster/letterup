@@ -59,8 +59,8 @@ export function FriendsDrawer({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card max-w-[380px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("friends.title")}>
         <div className="flex items-center gap-2">
-          <h3 className="headline flex-1 text-[19px]">{t("friends.title")}</h3>
-          <button type="button" className="btn btn-icon" style={{ background: "var(--color-line-soft)", color: "var(--color-pink)" }} onClick={onClose} aria-label={t("common.close")}>
+          <h3 className="headline flex-1 text-xl">{t("friends.title")}</h3>
+          <button type="button" className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand transition-transform active:scale-90" onClick={onClose} aria-label={t("common.close")}>
             <Icon name="close" size={16} />
           </button>
         </div>
@@ -143,8 +143,7 @@ export function FriendsDrawer({
                   )}
                   <button
                     type="button"
-                    className="btn btn-icon"
-                    style={{ background: "transparent", color: "var(--color-sand)" }}
+                    className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink/5 text-ink/45 transition-transform active:scale-90"
                     title={t("friends.remove")}
                     aria-label={t("friends.remove")}
                     onClick={() => onFollow(f.userId, false)}
@@ -180,7 +179,7 @@ function Row({
   onOpen: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-[14px] bg-cream p-2">
+    <div className="flex items-center gap-2.5 rounded-2xl bg-cream p-2">
       <span className="relative shrink-0">
         <Avatar name={name} url={avatarUrl} size={32} dim={!online} />
         {online && <span className="absolute -end-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-cream bg-mint" />}

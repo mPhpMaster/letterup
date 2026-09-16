@@ -3,32 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { normalizeAnswer, startsWithLetter } from "@/lib/letters";
+import { useSound } from "@/lib/sound";
 import { useServerNow } from "@/hooks/useGame";
 import { useGameContext } from "./GameContext";
-import { Icon, type IconName } from "./Icon";
-import { Avatar, LetterTile, TimerRing } from "./ui";
+import { Icon } from "./Icon";
+import { Avatar, CategoryTile, LetterTile, TimerRing } from "./ui";
 
 const AUTOSAVE_MS = 1_000;
 const REFRESH_AFTER_TIMEUP_MS = 2_600; // just past the server's answer grace window
 
-const CATEGORY_ICON: Record<string, IconName> = {
-  human: "user",
-  animal: "paw",
-  plant: "leaf",
-  object: "cube",
-  country: "earth",
-  city: "buildings",
-  food: "bowl",
-  brand: "tag",
-  job: "briefcase",
-  movie: "film",
-  color: "palette",
-  sport: "ball",
-};
-
 export function RoundPlay() {
   const { state, isHost, offset, call, refresh, openProfile } = useGameContext();
   const { t } = useI18n();
+  const { play } = useSound();
   const round = state.round!;
   const now = useServerNow(offset);
 
@@ -69,6 +56,20 @@ export function RoundPlay() {
     if (phase === "answer" && !submitted) inputs.current[0]?.focus();
   }, [phase, submitted]);
 
+  // Sound cues: a flourish when the letter lands (this screen is keyed by round), then
+  // a tick for each of the last five seconds.
+  useEffect(() => {
+    play("reveal");
+  }, [play]);
+
+  const secondsLeft = Math.max(0, Math.ceil((round.endsAt - now) / 1000));
+  const lastTick = useRef<number | null>(null);
+  useEffect(() => {
+    if (phase !== "answer" || secondsLeft > 5 || secondsLeft === 0 || lastTick.current === secondsLeft) return;
+    lastTick.current = secondsLeft;
+    play("tick");
+  }, [phase, secondsLeft, play]);
+
   const setDraft = (category: string, value: string) => {
     dirty.current = true;
     const next = { ...draftsRef.current, [category]: value };
@@ -77,124 +78,166 @@ export function RoundPlay() {
   };
 
   const activePlayers = state.players.filter((p) => p.online || round.submittedPlayerIds.includes(p.id));
+  const doneCount = round.submittedPlayerIds.length;
 
   if (phase === "reveal") {
     const count = Math.max(1, Math.ceil((round.startedAt - now) / 1000));
     return (
-      <div className="flex min-h-[55dvh] flex-col items-center justify-center gap-5 text-center">
-        <p className="text-[12px] font-bold tracking-wider text-muted uppercase">{t("play.getReady")}</p>
-        <LetterTile letter={round.letter} size={130} animate />
-        <p className="text-sm text-muted">{t("play.letterIs")}</p>
-        <p key={count} className="headline animate-pop-letter text-5xl text-pink tabular-nums">
+      <section className="card-pop animate-rise mx-auto flex min-h-[55dvh] w-full max-w-3xl flex-col items-center justify-center gap-6 text-center">
+        <p className="kicker">{t("play.getReady")}</p>
+        <LetterTile letter={round.letter} size={170} animate />
+        <p className="headline text-lg text-ink/60">{t("play.letterIs")}</p>
+        <p key={count} className="headline animate-pop-letter grid size-16 place-items-center rounded-full bg-ink text-4xl text-cream tabular-nums">
           {count}
         </p>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="animate-rise flex flex-col items-center gap-4">
-      {/* Letter and timer sit side by side: on a phone with the keyboard open,
-          stacking them pushed the answer fields off screen. */}
-      <div className="flex w-full items-center justify-center gap-5">
-        <div className="flex flex-col items-center gap-1.5">
-          <p className="text-[11px] font-bold tracking-wider text-muted uppercase">{t("play.letterIs")}</p>
-          <LetterTile letter={round.letter} size={92} />
+    <section className="card-pop animate-rise mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <div className="flex items-center gap-3">
+        {/* On a phone the letter rides in this row, so an open keyboard doesn't push
+            the answer fields off screen; wider panels get the big centred tile below. */}
+        <span className="sm:hidden">
+          <LetterTile letter={round.letter} size={64} animate />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="headline text-sm text-ink/50">
+            {/* The header drops its round badge on narrow panels, so say it here. */}
+            <span className="md:hidden">{t("header.roundLong", { current: round.number, total: state.settings.totalRounds })} · </span>
+            {t("play.letterIs")}
+          </p>
+          <p className="headline text-base leading-tight sm:text-lg">{t("play.beatTheClock")}</p>
         </div>
-        <TimerRing remainingMs={round.endsAt - now} totalMs={round.endsAt - round.startedAt} />
+        <span
+          className={`hidden rounded-full px-3 py-1 text-xs font-extrabold sm:block ${
+            secondsLeft <= 5 && phase === "answer" ? "bg-brand/15 text-brand" : "bg-mint/15 text-mint-deep"
+          }`}
+        >
+          {t("play.secondsLeft", { seconds: secondsLeft })}
+        </span>
+        <TimerRing remainingMs={round.endsAt - now} totalMs={round.endsAt - round.startedAt} size={60} />
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2">
-        {activePlayers.map((p) => {
-          const done = round.submittedPlayerIds.includes(p.id);
-          return (
-            <button key={p.id} type="button" className="relative" title={p.username} aria-label={p.username} onClick={() => openProfile(p.userId)}>
-              <Avatar name={p.username} url={p.avatarUrl} size={36} dim={!done} />
-              {done && (
-                <span className="animate-check-pop absolute -end-1 -bottom-1 grid size-4 place-items-center rounded-full border-2 border-cream bg-mint">
-                  <Icon name="check" size={9} className="text-mint-deep" strokeWidth={3.5} />
-                </span>
-              )}
-            </button>
-          );
-        })}
+      <div className="hidden justify-center py-2 sm:flex">
+        <LetterTile letter={round.letter} size={150} animate />
       </div>
-      <p className="-mt-2 text-[12px] text-muted">{t("play.progress", { done: round.submittedPlayerIds.length, total: activePlayers.length })}</p>
 
       {phase === "timeup" && (
-        <div className="card w-full border-sun text-center">
-          <p className="headline text-xl text-orange">{t("play.timeUp")}</p>
-          <p className="text-sm text-muted">{t("play.collecting")}</p>
+        <div className="animate-rise rounded-3xl bg-accent/25 p-4 text-center">
+          <p className="headline text-2xl text-brand">{t("play.timeUp")}</p>
+          <p className="text-sm font-bold text-ink/60">{t("play.collecting")}</p>
         </div>
       )}
 
       <form
-        className="flex w-full flex-col gap-3"
+        className="flex flex-col gap-5"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!locked) void save(true);
+          if (locked) return;
+          play("submit");
+          void save(true);
         }}
       >
-        {round.categories.map((category, i) => {
-          const value = drafts[category] ?? "";
-          const hasValue = value.trim() !== "";
-          const matches = hasValue && startsWithLetter(normalizeAnswer(value), round.letter);
-          return (
-            <div key={category}>
-              <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-muted">
-                <Icon name={CATEGORY_ICON[category] ?? "cube"} size={15} />
-                {t(`categories.${category}`)}
-                {hasValue && (
-                  <span className={`ms-auto text-[11px] font-bold ${matches ? "text-mint" : "text-amber"}`}>
-                    {matches ? "✓" : t("play.wrongLetter", { letter: round.letter })}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {round.categories.map((category, i) => {
+            const value = drafts[category] ?? "";
+            const hasValue = value.trim() !== "";
+            const matches = hasValue && startsWithLetter(normalizeAnswer(value), round.letter);
+            const name = t(`categories.${category}`);
+            return (
+              <label
+                key={category}
+                className={`flex items-center gap-3 rounded-2xl bg-cream p-3 outline-1 outline-ink/10 focus-within:outline-2 focus-within:outline-brand ${locked ? "opacity-80" : ""}`}
+              >
+                <CategoryTile id={category} size={42} />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="kicker truncate">{name}</span>
+                    {hasValue && (
+                      <span className={`ms-auto shrink-0 text-[11px] font-extrabold ${matches ? "text-mint-deep" : "text-brand"}`}>
+                        {matches ? "✓" : t("play.wrongLetter", { letter: round.letter })}
+                      </span>
+                    )}
                   </span>
-                )}
+                  <input
+                    ref={(el) => {
+                      inputs.current[i] = el;
+                    }}
+                    className="w-full min-w-0 bg-transparent text-base font-bold outline-none placeholder:font-semibold placeholder:text-ink/30 disabled:text-ink/60"
+                    dir="auto"
+                    lang={round.letterLocale}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    maxLength={60}
+                    enterKeyHint={i === round.categories.length - 1 ? "done" : "next"}
+                    placeholder={t("play.placeholder", { letter: round.letter })}
+                    aria-label={name}
+                    value={value}
+                    disabled={locked}
+                    // Mobile keyboards cover the lower half of the screen; keep the focused field visible.
+                    onFocus={(e) => {
+                      const field = e.currentTarget;
+                      setTimeout(() => field.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+                    }}
+                    onChange={(e) => setDraft(category, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && i < round.categories.length - 1) {
+                        e.preventDefault();
+                        inputs.current[i + 1]?.focus();
+                      }
+                    }}
+                  />
+                </span>
               </label>
-              <input
-                ref={(el) => {
-                  inputs.current[i] = el;
-                }}
-                className="input"
-                dir="auto"
-                lang={round.letterLocale}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                maxLength={60}
-                enterKeyHint={i === round.categories.length - 1 ? "done" : "next"}
-                placeholder={t("play.placeholder", { letter: round.letter })}
-                value={value}
-                disabled={locked}
-                // Mobile keyboards cover the lower half of the screen; keep the focused field visible.
-                onFocus={(e) => {
-                  const field = e.currentTarget;
-                  setTimeout(() => field.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
-                }}
-                onChange={(e) => setDraft(category, e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && i < round.categories.length - 1) {
-                    e.preventDefault();
-                    inputs.current[i + 1]?.focus();
-                  }
-                }}
-              />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
-        {/* On phones the button sits after the fields; from sm up it pins to the bottom. */}
-        <div className="z-10 flex flex-wrap gap-2 sm:sticky sm:bottom-3">
-          <button type="submit" className={`btn flex-1 text-base ${locked ? "btn-disabled" : "btn-primary"}`} disabled={locked}>
-            <Icon name="checkCircle" size={18} />
-            {submitted ? t("play.submitted") : t("play.done")}
-          </button>
-          {isHost && phase === "answer" && (
-            <button type="button" className="btn btn-ghost" onClick={() => void call("endRound")}>
-              {t("play.endNow")}
+        {/* From sm up the whole bar pins to the bottom; it carries its own background so
+            answers scrolling underneath never show through. */}
+        <div className="z-10 flex flex-wrap items-center justify-between gap-4 rounded-3xl sm:sticky sm:bottom-3 sm:bg-paper/95 sm:p-2 sm:shadow-[0_6px_0_var(--color-edge)] sm:backdrop-blur">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex -space-x-2 rtl:space-x-reverse">
+              {activePlayers.map((p) => {
+                const done = round.submittedPlayerIds.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="relative rounded-full ring-2 ring-paper"
+                    title={p.username}
+                    aria-label={p.username}
+                    onClick={() => openProfile(p.userId)}
+                  >
+                    <Avatar name={p.username} url={p.avatarUrl} size={36} dim={!done} />
+                    {done && (
+                      <span className="animate-check-pop absolute -end-1 -bottom-1 grid size-4 place-items-center rounded-full bg-mint text-[9px] font-bold text-ink ring-2 ring-paper">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-sm font-bold text-ink/60">{t("play.progress", { done: doneCount, total: activePlayers.length })}</p>
+          </div>
+
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            {isHost && phase === "answer" && (
+              <button type="button" className="btn btn-ghost" onClick={() => void call("endRound")}>
+                {t("play.endNow")}
+              </button>
+            )}
+            <button type="submit" className="btn btn-brand flex-1 px-8 text-lg sm:flex-none" disabled={locked}>
+              <Icon name="checkCircle" size={20} />
+              {submitted ? t("play.submitted") : t("play.done")}
             </button>
-          )}
+          </div>
         </div>
       </form>
-    </div>
+    </section>
   );
 }

@@ -44,12 +44,11 @@ export function AdminPanel({ token, onClose }: { token: string | null; onClose: 
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card max-w-[460px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("admin.title")}>
         <div className="flex items-center gap-2">
-          <h3 className="headline flex-1 text-[19px]">{t("admin.title")}</h3>
+          <h3 className="headline flex-1 text-xl">{t("admin.title")}</h3>
           {busy && <Spinner size={16} />}
           <button
             type="button"
-            className="btn btn-icon"
-            style={{ background: "var(--color-line-soft)", color: "var(--color-pink)" }}
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand transition-transform active:scale-90"
             onClick={onClose}
             aria-label={t("common.close")}
           >
@@ -73,7 +72,7 @@ export function AdminPanel({ token, onClose }: { token: string | null; onClose: 
           {state &&
             tab === "reports" &&
             state.reports.map((r) => (
-              <div key={r.id} className="rounded-[14px] bg-cream p-2.5" style={{ opacity: r.handled ? 0.55 : 1 }}>
+              <div key={r.id} className="rounded-2xl bg-cream p-2.5" style={{ opacity: r.handled ? 0.55 : 1 }}>
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-bold">{r.reportedName}</span>
                   <span className="text-[10px] text-sand">{date(r.createdAt)}</span>
@@ -100,7 +99,7 @@ export function AdminPanel({ token, onClose }: { token: string | null; onClose: 
           {state &&
             tab === "suggestions" &&
             state.suggestions.map((s) => (
-              <div key={s.id} className="rounded-[14px] bg-cream p-2.5" style={{ opacity: s.handled ? 0.55 : 1 }}>
+              <div key={s.id} className="rounded-2xl bg-cream p-2.5" style={{ opacity: s.handled ? 0.55 : 1 }}>
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-bold">{s.username}</span>
                   <span className="text-[10px] text-sand">{date(s.createdAt)}</span>
@@ -126,7 +125,7 @@ export function AdminPanel({ token, onClose }: { token: string | null; onClose: 
           {state &&
             tab === "banned" &&
             state.banned.map((b) => (
-              <div key={b.userId} className="flex items-center gap-2.5 rounded-[14px] bg-cream p-2.5">
+              <div key={b.userId} className="flex items-center gap-2.5 rounded-2xl bg-cream p-2.5">
                 <Avatar name={b.username} url={b.avatarUrl} size={30} />
                 <div className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{b.username}</span>

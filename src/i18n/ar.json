@@ -55,7 +55,10 @@
     "endGame": "إنهاء اللعبة",
     "language": "اللغة",
     "friends": "الأصدقاء",
-    "profile": "الملف الشخصي"
+    "profile": "الملف الشخصي",
+    "roundLong": "الجولة {current} من {total}",
+    "soundOn": "الصوت مفعّل",
+    "soundOff": "الصوت مكتوم"
   },
   "lobby": {
     "title": "الردهة",
@@ -95,7 +98,9 @@
     "readyOn": "جاهز! اضغط للإلغاء",
     "waitingHost": "بانتظار {name} لبدء اللعبة…",
     "leave": "مغادرة الردهة",
-    "leaveGame": "مغادرة اللعبة"
+    "leaveGame": "مغادرة اللعبة",
+    "roomCode": "رمز الغرفة",
+    "playersHeading": "اللاعبون"
   },
   "categories": {
     "human": "إنسان",
@@ -122,7 +127,9 @@
     "timeUp": "انتهى الوقت!",
     "collecting": "جارٍ جمع إجابات الجميع…",
     "endNow": "أنهِ الجولة الآن",
-    "timeLeft": "الوقت المتبقي: {seconds} ثانية"
+    "timeLeft": "الوقت المتبقي: {seconds} ثانية",
+    "beatTheClock": "اسبق الوقت واكتب كل شيء!",
+    "secondsLeft": "متبقي {seconds} ث"
   },
   "vote": {
     "title": "صوّت على الإجابات",
@@ -147,7 +154,10 @@
     "waitingOthers": "بانتظار تصويت الجميع على هذه الفئة…",
     "allReviewed": "تمت مراجعة كل الفئات.",
     "confirm": "اعتماد النقاط",
-    "waitingHost": "بانتظار {name} لاعتماد النقاط…"
+    "waitingHost": "بانتظار {name} لاعتماد النقاط…",
+    "legendUnique": "فريدة · 10",
+    "legendShared": "مكررة · 5",
+    "legendInvalid": "غير صالحة · 0"
   },
   "results": {
     "title": "نتائج الجولة {number}",
@@ -165,7 +175,8 @@
     "tie": "تعادل بين {names}!",
     "playAgain": "العب مجددًا",
     "waitingHost": "بانتظار {name} لبدء لعبة جديدة…",
-    "listSeparator": "، "
+    "listSeparator": "، ",
+    "standings": "الترتيب النهائي"
   },
   "friends": {
     "title": "الأصدقاء",

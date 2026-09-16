@@ -1,21 +1,31 @@
 "use client";
 
+import { useEffect } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { rankByScore } from "@/lib/ranking";
+import { useSound } from "@/lib/sound";
 import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
-import { Avatar, PlayerName } from "./ui";
+import { Avatar, Confetti, PlayerName } from "./ui";
 
-const CONFETTI_COLORS = ["#ffd166", "#ff8a3d", "#ff5d8f", "#06d6a0", "#7b5cff"];
+/** Podium blocks, in visual order 2nd · 1st · 3rd (flex follows direction, so RTL mirrors it). */
+const PODIUM = [
+  { place: 1, height: "h-20", bg: "bg-sky" },
+  { place: 0, height: "h-32", bg: "bg-accent" },
+  { place: 2, height: "h-14", bg: "bg-grape" },
+] as const;
 
 export function FinalLeaderboard() {
   const { state, isHost, hostName, call, openProfile } = useGameContext();
   const { t } = useI18n();
+  const { play } = useSound();
   const ranked = rankByScore(state.players);
   const winners = ranked.filter((p) => p.rank === 1);
-  // Visual order 2nd · 1st · 3rd (flex follows document direction, so RTL mirrors it)
-  const podium = [ranked[1], ranked[0], ranked[2]].filter(Boolean);
   const rest = ranked.slice(3);
+
+  useEffect(() => {
+    play("fanfare");
+  }, [play]);
 
   const headline =
     winners.length === 1
@@ -23,89 +33,76 @@ export function FinalLeaderboard() {
       : t("final.tie", { names: winners.map((w) => w.username).join(t("final.listSeparator")) });
 
   return (
-    <div className="animate-rise relative flex flex-col items-center gap-5 overflow-hidden pb-3">
+    <div className="relative mx-auto flex w-full max-w-xl flex-col gap-5">
       <Confetti />
-      <h2 className="headline text-center text-[28px]">{t("final.title")} 🎊</h2>
-      <p className="text-center text-[17px] font-bold text-orange" dir="auto">
-        {headline}
-      </p>
+      <section className="card-pop animate-rise relative overflow-hidden text-center">
+        <p className="headline text-3xl text-brand">{t("final.title")} 🎊</p>
+        <p className="kicker mt-1" dir="auto">
+          {headline}
+        </p>
 
-      <div className="flex w-full items-end justify-center gap-3">
-        {podium.map((p) => (
-          <div key={p.id} className="flex w-[92px] flex-col items-center gap-1.5">
-            {p.rank === 1 && <Icon name="crown" size={24} className="text-amber" filled />}
-            <Avatar
-              name={p.username}
-              url={p.avatarUrl}
-              size={p.rank === 1 ? 58 : 46}
-              ring={p.rank === 1 ? "3px solid var(--color-amber)" : "2px solid var(--color-line)"}
-            />
-            <button type="button" className="w-full truncate text-center text-[12px] font-bold" onClick={() => openProfile(p.userId)}>
-              {p.username}
-            </button>
-            <span className="headline text-orange">{p.score}</span>
-            <div
-              className="headline flex w-full justify-center rounded-t-[10px] pt-1.5 text-[20px]"
-              style={{
-                height: p.rank === 1 ? 66 : p.rank === 2 ? 48 : 34,
-                background: p.rank === 1 ? "var(--color-sun)" : "var(--color-card)",
-                border: p.rank === 1 ? "none" : "2px solid var(--color-line)",
-                color: p.rank === 1 ? "var(--color-ink)" : "var(--color-sand)",
+        <div className="mt-8 grid grid-cols-3 items-end gap-2">
+          {PODIUM.map(({ place, height, bg }) => {
+            const p = ranked[place];
+            if (!p) return <div key={place} />;
+            return (
+              <div key={place} className="flex min-w-0 flex-col items-center gap-2">
+                <span className="animate-score-pop relative" style={{ animationDelay: `${(place + 1) * 120}ms` }}>
+                  {p.rank === 1 && <span className="absolute -top-5 start-1/2 -translate-x-1/2 text-2xl rtl:translate-x-1/2">👑</span>}
+                  <Avatar name={p.username} url={p.avatarUrl} size={p.rank === 1 ? 60 : 48} ring={p.rank === 1 ? "3px solid var(--color-accent)" : undefined} />
+                </span>
+                <button type="button" className="max-w-full truncate text-xs font-extrabold hover:underline" onClick={() => openProfile(p.userId)}>
+                  {p.username}
+                </button>
+                <div className={`${height} ${bg} headline grid w-full place-items-center rounded-t-3xl text-2xl text-ink shadow-[0_6px_0_rgba(0,0,0,0.12)]`}>
+                  {p.rank === 1 ? "🏆" : p.rank}
+                </div>
+                <span className="headline text-lg tabular-nums">{p.score}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {rest.length > 0 && (
+          <>
+            <p className="kicker mt-7">{t("final.standings")}</p>
+            <ul className="mt-2 flex flex-col gap-2 text-start">
+              {rest.map((p) => (
+                <li key={p.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl bg-cream p-2.5">
+                  <span className="headline grid size-7 place-items-center rounded-xl bg-paper text-sm">{p.rank}</span>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Avatar name={p.username} url={p.avatarUrl} size={32} />
+                    <span className="flex min-w-0 text-sm">
+                      <PlayerName player={p} meId={state.me.playerId} onClick={() => openProfile(p.userId)} />
+                    </span>
+                  </div>
+                  <span className="headline text-base tabular-nums">{p.score}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <div className="mt-7">
+          {isHost ? (
+            <button
+              type="button"
+              className="btn btn-brand w-full py-4 text-xl"
+              onClick={() => {
+                play("click");
+                void call("lobby");
               }}
             >
-              {p.rank}
+              <Icon name="replay" size={20} />
+              {t("final.playAgain")}
+            </button>
+          ) : (
+            <div className="waiting">
+              <p className="animate-pulse-soft">{t("final.waitingHost", { name: hostName })}</p>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {rest.length > 0 && (
-        <div className="flex w-full flex-col gap-1.5">
-          {rest.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 rounded-[14px] border-2 border-line bg-card px-3 py-2">
-              <span className="headline w-5 text-[13px] text-sand">{p.rank}</span>
-              <Avatar name={p.username} url={p.avatarUrl} size={28} />
-              <span className="min-w-0 flex-1 text-[13px]">
-                <PlayerName player={p} meId={state.me.playerId} onClick={() => openProfile(p.userId)} />
-              </span>
-              <span className="headline text-[14px] text-orange">{p.score}</span>
-            </div>
-          ))}
+          )}
         </div>
-      )}
-
-      <div className="z-10 w-full sm:sticky sm:bottom-3">
-        {isHost ? (
-          <button type="button" className="btn btn-primary w-full text-base" onClick={() => void call("lobby")}>
-            <Icon name="replay" size={18} />
-            {t("final.playAgain")}
-          </button>
-        ) : (
-          <div className="waiting">
-            <Icon name="hourglass" size={16} className="me-1.5 inline" />
-            {t("final.waitingHost", { name: hostName })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Confetti() {
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-      {Array.from({ length: 40 }, (_, i) => (
-        <span
-          key={i}
-          className="confetti"
-          style={{
-            insetInlineStart: `${(i * 41) % 100}%`,
-            background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-            animationDelay: `${(i % 7) * 0.3}s`,
-            animationDuration: `${2.4 + (i % 5) * 0.4}s`,
-          }}
-        />
-      ))}
+      </section>
     </div>
   );
 }

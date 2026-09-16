@@ -51,7 +51,10 @@
     "endGame": "End game",
     "language": "Language",
     "friends": "Friends",
-    "profile": "Profile"
+    "profile": "Profile",
+    "roundLong": "Round {current} of {total}",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off"
   },
   "lobby": {
     "title": "Lobby",
@@ -87,7 +90,9 @@
     "readyOn": "Ready! Tap to cancel",
     "waitingHost": "Waiting for {name} to start the game…",
     "leave": "Leave lobby",
-    "leaveGame": "Leave game"
+    "leaveGame": "Leave game",
+    "roomCode": "Room code",
+    "playersHeading": "Players"
   },
   "categories": {
     "human": "Human",
@@ -114,7 +119,9 @@
     "timeUp": "Time's up!",
     "collecting": "Collecting everyone's answers…",
     "endNow": "End round now",
-    "timeLeft": "{seconds} seconds left"
+    "timeLeft": "{seconds} seconds left",
+    "beatTheClock": "Beat the clock, name everything!",
+    "secondsLeft": "{seconds}s left"
   },
   "vote": {
     "title": "Vote on the answers",
@@ -139,7 +146,10 @@
     "waitingOthers": "Waiting for everyone to vote on this category…",
     "allReviewed": "Every category reviewed.",
     "confirm": "Confirm Scores",
-    "waitingHost": "Waiting for {name} to confirm the scores…"
+    "waitingHost": "Waiting for {name} to confirm the scores…",
+    "legendUnique": "Unique · 10",
+    "legendShared": "Shared · 5",
+    "legendInvalid": "Invalid · 0"
   },
   "results": {
     "title": "Round {number} results",
@@ -157,7 +167,8 @@
     "tie": "It's a tie between {names}!",
     "playAgain": "Play Again",
     "waitingHost": "Waiting for {name} to start a new game…",
-    "listSeparator": ", "
+    "listSeparator": ", ",
+    "standings": "Final standings"
   },
   "friends": {
     "title": "Friends",

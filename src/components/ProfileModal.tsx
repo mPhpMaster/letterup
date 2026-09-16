@@ -65,8 +65,7 @@ export function ProfileModal({
               </div>
               <button
                 type="button"
-                className="btn btn-icon"
-                style={{ background: "var(--color-line-soft)", color: "var(--color-pink)" }}
+                className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand transition-transform active:scale-90"
                 onClick={onClose}
                 aria-label={t("common.close")}
               >
@@ -86,8 +85,8 @@ export function ProfileModal({
             ) : (
               <div className="grid max-h-[40dvh] grid-cols-2 gap-2 overflow-y-auto">
                 {stats.map((s) => (
-                  <div key={s.label} className="rounded-[14px] border-2 border-line bg-cream p-2.5 text-center">
-                    <div className="headline text-xl text-orange">{s.value}</div>
+                  <div key={s.label} className="rounded-2xl bg-cream p-3 text-center outline-1 outline-ink/5">
+                    <div className="headline text-2xl text-brand">{s.value}</div>
                     <div className="text-[11px] font-semibold text-muted">{s.label}</div>
                   </div>
                 ))}
@@ -98,7 +97,7 @@ export function ProfileModal({
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  className={`btn ${profile.isFollowing ? "btn-ghost" : "btn-primary"} w-full`}
+                  className={`btn ${profile.isFollowing ? "btn-ghost" : "btn-brand"} w-full`}
                   onClick={() => onToggleFollow(profile.userId, !profile.isFollowing)}
                 >
                   <Icon name={profile.isFollowing ? "userCheck" : "userPlus"} size={17} />

@@ -41,46 +41,59 @@ export function RoomList({ token, onJoin }: { token: string | null; onJoin: (roo
   };
 
   return (
-    <section className="card flex flex-col gap-2">
+    <section className="card-pop animate-rise flex flex-col gap-3" style={{ animationDelay: "80ms" }}>
       <div className="flex items-center gap-2">
-        <h2 className="headline flex-1 text-base">{t("rooms.title")}</h2>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => void load()} disabled={loading}>
-          <Icon name="replay" size={14} />
+        <h2 className="headline flex-1 text-xl">{t("rooms.title")}</h2>
+        <button type="button" className="seg-item flex items-center gap-1.5 px-3! py-1.5! text-xs!" onClick={() => void load()} disabled={loading}>
+          <Icon name="replay" size={14} className={loading ? "animate-spin" : ""} />
           {t("rooms.refresh")}
         </button>
       </div>
 
       {!rooms && (
-        <div className="grid place-items-center py-4">
-          <Spinner size={22} />
+        <div className="grid place-items-center py-6">
+          <Spinner size={26} />
         </div>
       )}
-      {rooms?.length === 0 && <p className="py-2 text-sm text-muted">{t("rooms.empty")}</p>}
-
-      {rooms?.map((room) => (
-        <div key={room.roomCode} className="flex items-center gap-2.5 rounded-[14px] bg-cream p-2.5">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-sm font-bold tracking-[0.12em] text-orange" dir="ltr">
-                {room.roomCode}
-              </span>
-              {room.hasPassword && (
-                <span className="pill gap-1 px-2 py-0.5 text-[10px] text-sand" title={t("rooms.locked")}>
-                  <Icon name="link" size={11} />
-                  {t("rooms.locked")}
-                </span>
-              )}
-            </div>
-            <div className="truncate text-[11px] text-muted">
-              {statusLabel(room)} · {t("rooms.players", { count: room.playerCount })}
-              {room.hostUsername ? ` · ${t("rooms.hostedBy", { name: room.hostUsername })}` : ""}
-            </div>
-          </div>
-          <button type="button" className="btn btn-mint btn-sm" onClick={() => onJoin(room)}>
-            {t("rooms.join")}
-          </button>
+      {rooms?.length === 0 && (
+        <div className="rounded-3xl bg-cream px-4 py-8 text-center">
+          <p className="text-3xl" aria-hidden>
+            🎲
+          </p>
+          <p className="mt-2 text-sm font-bold text-muted">{t("rooms.empty")}</p>
         </div>
-      ))}
+      )}
+
+      <ul className="flex flex-col gap-2">
+        {rooms?.map((room, i) => (
+          <li
+            key={room.roomCode}
+            className="animate-rise flex items-center gap-3 rounded-2xl bg-cream p-3 outline-1 outline-ink/5"
+            style={{ animationDelay: `${i * 40}ms` }}
+          >
+            <span className={`size-2.5 shrink-0 rounded-full ${room.status === "lobby" ? "bg-mint" : "bg-accent"}`} aria-hidden />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="headline text-base tracking-[0.15em] text-brand" dir="ltr">
+                  {room.roomCode}
+                </span>
+                {room.hasPassword && (
+                  <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-extrabold text-ink/50" title={t("rooms.locked")}>
+                    🔒 {t("rooms.locked")}
+                  </span>
+                )}
+              </div>
+              <div className="truncate text-xs font-semibold text-muted">
+                {statusLabel(room)} · {t("rooms.players", { count: room.playerCount })}
+                {room.hostUsername ? ` · ${t("rooms.hostedBy", { name: room.hostUsername })}` : ""}
+              </div>
+            </div>
+            <button type="button" className="btn btn-mint btn-sm shrink-0" onClick={() => onJoin(room)}>
+              {t("rooms.join")}
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

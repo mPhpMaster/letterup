@@ -41,13 +41,12 @@ export function Leaderboard({
       <div className="modal-card max-w-[420px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("leaderboard.title")}>
         <div className="flex items-start gap-2">
           <div className="flex-1">
-            <h3 className="headline text-[19px]">{t("leaderboard.title")} 🏆</h3>
+            <h3 className="headline text-xl">{t("leaderboard.title")} 🏆</h3>
             <p className="text-[11px] text-muted">{t("leaderboard.subtitle")}</p>
           </div>
           <button
             type="button"
-            className="btn btn-icon"
-            style={{ background: "var(--color-line-soft)", color: "var(--color-pink)" }}
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand transition-transform active:scale-90"
             onClick={onClose}
             aria-label={t("common.close")}
           >
@@ -85,12 +84,11 @@ export function Leaderboard({
                       {t("leaderboard.wins")}: {e.wins} · {t("leaderboard.games")}: {e.gamesPlayed}
                     </span>
                   </button>
-                  <span className="headline shrink-0 text-[15px] text-orange tabular-nums">{e.totalPoints}</span>
+                  <span className="headline shrink-0 text-[15px] text-brand tabular-nums">{e.totalPoints}</span>
                   {!isMe && (
                     <button
                       type="button"
-                      className="btn btn-icon"
-                      style={{ background: "transparent", color: "var(--color-sand)" }}
+                      className="grid size-8 shrink-0 place-items-center rounded-xl bg-ink/5 text-ink/45 transition-transform active:scale-90"
                       title={t("report.open")}
                       aria-label={t("report.open")}
                       onClick={() => onReport(e.userId, e.username)}

@@ -51,8 +51,7 @@ export function TextPrompt({
           </div>
           <button
             type="button"
-            className="btn btn-icon"
-            style={{ background: "var(--color-line-soft)", color: "var(--color-pink)" }}
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand transition-transform active:scale-90"
             onClick={onClose}
             aria-label={t("common.close")}
           >
@@ -94,7 +93,7 @@ export function TextPrompt({
           <button type="button" className="btn btn-ghost flex-1" onClick={onClose}>
             {t("common.cancel")}
           </button>
-          <button type="submit" className="btn btn-primary flex-1" disabled={busy || !value.trim()}>
+          <button type="submit" className="btn btn-brand flex-1" disabled={busy || !value.trim()}>
             {submitLabel}
           </button>
         </div>
