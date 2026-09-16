@@ -198,10 +198,28 @@ async function maybeMigrateHost(core: Core, now: number): Promise<boolean> {
   return data.length > 0;
 }
 
+/**
+ * Close answering and open voting.
+ *
+ * Categories nobody can vote on -- all answers blank, or a solo round with no one
+ * else to vote -- are skipped on the spot. Left to the heartbeat, the room sat on
+ * "waiting for everyone to vote" for up to a poll interval with nothing to wait for.
+ */
+async function openVoting(round: RoundRow): Promise<void> {
+  const db = admin();
+  const { error } = await db.rpc("end_round", { p_round_id: round.id });
+  if (error) throw new Error(`end_round: ${error.message}`);
+  const advanced = await db.rpc("advance_vote_category", { p_round_id: round.id });
+  if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
+  // end_round already bumped the game version, and other clients may fetch before
+  // the skip lands -- bump again so they catch it. Only when the category actually
+  // moved, so an ordinary round does not wake everyone twice.
+  if (typeof advanced.data === "number" && advanced.data > 0) await touch(round.game_id);
+}
+
 async function endRoundIfNeeded(round: RoundRow | null, now: number): Promise<boolean> {
   if (!round || round.status !== "playing" || now <= Date.parse(round.ends_at) + ANSWER_GRACE_MS) return false;
-  const { error } = await admin().rpc("end_round", { p_round_id: round.id });
-  if (error) throw new Error(`end_round: ${error.message}`);
+  await openVoting(round);
   return true;
 }
 
@@ -655,8 +673,7 @@ export const actions: Record<string, Action> = {
 
       const everyoneDone = m.players.filter((p) => p.id === m.me.id || isOnline(p, now)).every((p) => submittedIds.has(p.id));
       if (everyoneDone) {
-        const { error } = await db.rpc("end_round", { p_round_id: round.id });
-        if (error) throw new Error(`end_round: ${error.message}`);
+        await openVoting(round);
       } else {
         await touch(m.game.id);
       }
@@ -669,10 +686,7 @@ export const actions: Record<string, Action> = {
     requireHost(m);
     requireStatus(m, "playing");
     const round = await currentRound(m.game);
-    if (round) {
-      const { error } = await admin().rpc("end_round", { p_round_id: round.id });
-      if (error) throw new Error(`end_round: ${error.message}`);
-    }
+    if (round) await openVoting(round);
     return buildState(user, m.game.id);
   },
 
