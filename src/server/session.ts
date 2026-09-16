@@ -89,9 +89,15 @@ interface DiscordUser {
   avatar?: string | null;
 }
 
-/** Discord names can carry runs of exotic spaces; collapse them so lists stay readable. */
-export const cleanName = (name: string): string =>
-  name.replace(/[\s  -‍  　]+/g, " ").trim().slice(0, 64) || "Player";
+/**
+ * Discord names can carry runs of exotic spaces; collapse them so lists stay readable.
+ * Built from code points rather than a character-class range: the zero-width characters
+ * in that range break the bundler's regex parser when written literally.
+ */
+const SPACE_CODES = [0x0009, 0x000a, 0x000d, 0x0020, 0x00a0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x200b, 0x200c, 0x200d, 0x2028, 0x2029, 0x202f, 0x205f, 0x2060, 0x3000, 0xfeff];
+const SPACE_RE = new RegExp(`[${SPACE_CODES.map((c) => `\\u${c.toString(16).padStart(4, "0")}`).join("")}]+`, "g");
+
+export const cleanName = (name: string): string => name.replace(SPACE_RE, " ").trim().slice(0, 64) || "Player";
 
 export function discordUserToSession(u: DiscordUser): SessionUser {
   const avatarUrl = u.avatar
