@@ -1,10 +1,12 @@
 {
   "app": {
     "title": "Human, Animal, Plant, Object",
+    "short": "LetterUp",
     "tagline": "One letter. Every category. Quickest wits win."
   },
   "common": {
     "host": "Host",
+    "guest": "Guest",
     "you": "you",
     "away": "Away",
     "ready": "Ready",
@@ -12,6 +14,8 @@
     "points_other": "{count} pts",
     "retry": "Try again",
     "dismiss": "Dismiss",
+    "close": "Close",
+    "cancel": "Cancel",
     "confirmTap": "Tap again to confirm"
   },
   "boot": {
@@ -21,26 +25,44 @@
     "failed": "Couldn't start the game",
     "hint": "Check the Activity URL mappings and environment variables, then relaunch the Activity."
   },
-  "guest": {
-    "title": "Local test mode",
-    "subtitle": "You're outside Discord. Pick a name and a room code, then open more tabs with the same room to play against yourself.",
-    "name": "Your name",
-    "room": "Room code",
-    "join": "Join room",
-    "joining": "Joining…"
+  "login": {
+    "title": "Welcome to LetterUp",
+    "subtitle": "Sign in with Discord to create or join a game room.",
+    "continueDiscord": "Continue with Discord",
+    "signingIn": "Taking you to Discord…",
+    "failed": "Sign-in failed. Please try again."
+  },
+  "room": {
+    "title": "Ready to play?",
+    "createCta": "Create a Room",
+    "creating": "Creating…",
+    "or": "OR",
+    "joinPlaceholder": "Enter room code",
+    "joinCta": "Join",
+    "joining": "Joining…",
+    "signedInAs": "Signed in as {name}",
+    "signOut": "Sign out"
   },
   "header": {
     "round": "Round {current}/{total}",
     "endGame": "End game",
-    "language": "Language"
+    "language": "Language",
+    "friends": "Friends",
+    "profile": "Profile"
   },
   "lobby": {
     "title": "Lobby",
     "players_one": "{count} player",
     "players_other": "{count} players",
     "invite": "Anyone in the voice channel can join by launching the Activity.",
+    "inviteWeb": "Share the room code or the invite link with your friends.",
+    "inviteFriends": "Invite Friends",
+    "copyLink": "Copy Invite Link",
+    "linkCopied": "Link copied!",
+    "copyFailed": "Couldn't copy — the link is {link}",
+    "kick": "Remove player",
     "settings": "Game settings",
-    "hostOnly": "Only the host can change settings.",
+    "hostOnly": "Only the host can change these settings.",
     "roundDuration": "Round duration",
     "secondsShort": "{value}s",
     "rounds": "Number of rounds",
@@ -55,7 +77,7 @@
     "selectAll": "Select all",
     "defaults": "Defaults",
     "needCategory": "Keep at least one category selected.",
-    "start": "Start game",
+    "start": "Start Game",
     "readyCount": "{ready}/{total} ready",
     "imReady": "I'm ready",
     "readyOn": "Ready! Tap to cancel",
@@ -91,11 +113,14 @@
   "vote": {
     "title": "Vote on the answers",
     "help": "Give 👍 or 👎 to other players' answers. An answer is thrown out if more players reject it than accept it (its author counts as one 👍).",
+    "helpTwoPlayers": "With two players your 👎 decides: reject an answer and it scores nothing.",
     "rules": "Unique valid answer: 10 · Shared answer: 5 · Invalid or blank: 0",
-    "hostHelp": "As host you can overrule any answer with ✓ or ✗.",
+    "hostHelp": "As host you can overrule other players' answers with ✓ or ✗.",
     "noAnswer": "No answer",
     "wrongLetter": "Wrong letter",
     "duplicate": "Shared",
+    "unique": "Unique",
+    "rejected": "Rejected",
     "hostRuled": "Host ruling",
     "approve": "Accept",
     "reject": "Reject",
@@ -103,24 +128,66 @@
     "forceInvalid": "Rule invalid",
     "votes": "Votes",
     "hostControls": "Host ruling",
-    "confirm": "Confirm scores",
+    "confirm": "Confirm Scores",
     "waitingHost": "Waiting for {name} to confirm the scores…"
   },
   "results": {
     "title": "Round {number} results",
+    "scoreboard": "Scoreboard",
     "thisRound": "This round",
     "total": "Total",
     "showAnswers": "Show all answers",
-    "next": "Next round",
-    "final": "See final results",
+    "next": "Next Round",
+    "final": "See Final Results",
     "waitingHost": "Waiting for {name} to continue…"
   },
   "final": {
-    "title": "Final leaderboard",
+    "title": "Final Leaderboard",
     "winner": "{name} wins!",
     "tie": "It's a tie between {names}!",
-    "playAgain": "Play again",
+    "playAgain": "Play Again",
     "waitingHost": "Waiting for {name} to start a new game…",
     "listSeparator": ", "
+  },
+  "friends": {
+    "title": "Friends",
+    "searchPlaceholder": "Add by username",
+    "searchCta": "Search",
+    "searching": "Searching…",
+    "noResults": "Nobody found with that name.",
+    "empty": "You're not following anyone yet. Tap a player's name after a game to follow them.",
+    "online": "Online",
+    "offline": "Offline",
+    "invite": "Invite",
+    "invited": "Invited",
+    "inviteSent": "Invite sent!",
+    "inviteNeedsRoom": "Start or join a room first, then invite friends to it.",
+    "join": "Join",
+    "inGame": "In a game",
+    "follow": "Follow",
+    "following": "Following",
+    "remove": "Remove"
+  },
+  "profile": {
+    "gamesPlayed": "Games Played",
+    "wins": "Wins",
+    "roundsPlayed": "Rounds Played",
+    "totalPoints": "Total Points",
+    "bestScore": "Best Score",
+    "avgPerRound": "Avg Points/Round",
+    "follow": "Follow",
+    "following": "Following",
+    "joinTheirRoom": "Join their room",
+    "noStats": "No finished games yet."
+  },
+  "invites": {
+    "title": "Invites",
+    "fromLine": "{name} invited you to play",
+    "join": "Join",
+    "dismiss": "Dismiss",
+    "none": "No invites right now."
+  },
+  "errors": {
+    "generic": "Something went wrong."
   }
 }

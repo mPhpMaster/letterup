@@ -1,24 +1,32 @@
 import type { Metadata, Viewport } from "next";
-import { Rubik } from "next/font/google";
+import { Baloo_2, Baloo_Bhaijaan_2, Inter, Tajawal } from "next/font/google";
 import "./globals.css";
 
-// Rubik covers both Latin and Arabic, so both languages share one typeface.
-const rubik = Rubik({ subsets: ["latin", "arabic"], variable: "--font-rubik", display: "swap" });
+// Headings use the rounded Baloo family, body text Inter (Latin) / Tajawal (Arabic).
+const baloo = Baloo_2({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-baloo", display: "swap" });
+const balooAr = Baloo_Bhaijaan_2({ subsets: ["arabic"], weight: ["600", "700", "800"], variable: "--font-baloo-ar", display: "swap" });
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-inter", display: "swap" });
+const tajawal = Tajawal({ subsets: ["arabic"], weight: ["400", "500", "700"], variable: "--font-tajawal", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Human, Animal, Plant, Object",
+  title: "LetterUp — Human, Animal, Plant, Object",
   description: "A multiplayer word game Discord Activity — إنسان، حيوان، نبات، جماد",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#13141c",
+  themeColor: "#fff6e8",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" dir="ltr" className={rubik.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      dir="ltr"
+      className={`${baloo.variable} ${balooAr.variable} ${inter.variable} ${tajawal.variable}`}
+      suppressHydrationWarning
+    >
       <body className="antialiased">{children}</body>
     </html>
   );

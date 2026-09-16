@@ -15,6 +15,11 @@ export interface GameContextValue {
   participantIds: ReadonlySet<string>;
   call: CallGame;
   refresh: () => Promise<void>;
+  /** Opens the stats card for a player (by Discord/user id). */
+  openProfile: (userId: string) => void;
+  openFriends: () => void;
+  /** Copies the room invite link; null when the room can't be shared (Discord Activity). */
+  copyInvite: (() => void) | null;
 }
 
 export const GameContext = createContext<GameContextValue | null>(null);

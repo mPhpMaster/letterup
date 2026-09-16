@@ -3,7 +3,12 @@ import { admin } from "./supabase-admin";
 import { CATEGORY_IDS } from "@/lib/categories";
 import { normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
 import { computeRoundScores } from "@/lib/scoring";
-import type { AnswerView, GameState, GameStatus, PlayerView, RoundView, SessionUser } from "@/lib/types";
+import type { AnswerView, GameOrigin, GameState, GameStatus, PlayerView, RoundView, SessionUser } from "@/lib/types";
+
+/** Unambiguous room codes: no O/0, I/1, etc. */
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const newRoomCode = () =>
+  Array.from({ length: 5 }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join("");
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -29,6 +34,8 @@ interface GameRow {
   current_round: number;
   used_letters: string[];
   version: number;
+  room_code: string | null;
+  origin: GameOrigin;
 }
 interface SettingsRow {
   game_id: string;
@@ -48,6 +55,7 @@ interface PlayerRow {
   is_ready: boolean;
   joined_at: string;
   last_seen_at: string;
+  kicked_at: string | null;
 }
 interface RoundRow {
   id: string;
@@ -124,7 +132,7 @@ async function loadCore(gameId: string): Promise<Core> {
   const [game, settings, players] = await Promise.all([
     db.from("games").select("*").eq("id", gameId).maybeSingle<GameRow>(),
     db.from("settings").select("*").eq("game_id", gameId).maybeSingle<SettingsRow>(),
-    db.from("players").select("*").eq("game_id", gameId).order("joined_at").returns<PlayerRow[]>(),
+    db.from("players").select("*").eq("game_id", gameId).is("kicked_at", null).order("joined_at").returns<PlayerRow[]>(),
   ]);
   return {
     game: check(game, "game"),
@@ -272,6 +280,8 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
       hostUserId: game.host_user_id,
       currentRound: game.current_round,
       version: game.version,
+      roomCode: game.room_code,
+      origin: game.origin,
     },
     me: { playerId: me.id, userId: me.user_id },
     settings: {
@@ -334,6 +344,62 @@ export const actions: Record<string, Action> = {
     await maybeMigrateHost(await loadCore(game.id), Date.now());
     await touch(game.id);
     return buildState(user, game.id);
+  },
+
+  /** Browser play: open a fresh room with a short code to share. */
+  async createRoom(user, _body) {
+    const db = admin();
+    let game: GameRow | null = null;
+    for (let attempt = 0; attempt < 5 && !game; attempt++) {
+      const code = newRoomCode();
+      const res = await db
+        .from("games")
+        .insert({ instance_id: `web:${code}`, room_code: code, origin: "web", host_user_id: user.userId })
+        .select("*")
+        .maybeSingle<GameRow>();
+      if (res.error) {
+        if (res.error.code === "23505") continue; // code collision, try another
+        throw new Error(`create room: ${res.error.message}`);
+      }
+      game = res.data;
+    }
+    if (!game) throw new HttpError(503, "Could not create a room, try again");
+
+    const settings = await db.from("settings").insert({ game_id: game.id });
+    if (settings.error) throw new Error(`settings: ${settings.error.message}`);
+    await addPlayer(game.id, user);
+    await touch(game.id);
+    return buildState(user, game.id);
+  },
+
+  /** Browser play: join an existing room by its short code. */
+  async joinCode(user, body) {
+    const raw = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
+    if (!/^[A-Z0-9]{4,8}$/.test(raw)) throw new HttpError(400, "Invalid room code");
+    const db = admin();
+    const game = check(await db.from("games").select("*").eq("room_code", raw).maybeSingle<GameRow>(), "room");
+    if (game.status === "finished") throw new HttpError(409, "That game has already finished");
+    await addPlayer(game.id, user);
+    await claimHostIfFree(game, user);
+    await touch(game.id);
+    return buildState(user, game.id);
+  },
+
+  /** Host removes someone from the lobby. */
+  async kick(user, body) {
+    const m = await requireMember(user, body);
+    requireHost(m);
+    requireStatus(m, "lobby");
+    const playerId = uuid(body.playerId, "playerId");
+    if (playerId === m.me.id) throw new HttpError(400, "You can't remove yourself");
+    const { error } = await admin()
+      .from("players")
+      .update({ kicked_at: new Date().toISOString() })
+      .eq("id", playerId)
+      .eq("game_id", m.game.id);
+    if (error) throw new Error(`kick: ${error.message}`);
+    await touch(m.game.id);
+    return buildState(user, m.game.id);
   },
 
   /** Fetch state. Doubles as heartbeat and as the server-side timer / host-failover tick. */
@@ -426,6 +492,9 @@ export const actions: Record<string, Action> = {
     if (m.game.current_round >= m.settings.total_rounds) {
       const { error } = await db.from("games").update({ status: "finished" }).eq("id", m.game.id).eq("status", "results");
       if (error) throw new Error(`finish: ${error.message}`);
+      // Lifetime stats for the profile cards; the RPC only counts each game once.
+      const stats = await db.rpc("record_game_stats", { p_game_id: m.game.id });
+      if (stats.error) console.error("[record_game_stats]", stats.error.message);
       await touch(m.game.id);
       return buildState(user, m.game.id);
     }
@@ -534,6 +603,8 @@ export const actions: Record<string, Action> = {
     requireHost(m);
     requireStatus(m, "voting");
     const answer = await votableAnswer(m, body);
+    // The host may settle other players' disputes, but not rule on their own answer.
+    if (answer.player_id === m.me.id) throw new HttpError(400, "You can't rule on your own answer");
     const verdict = triState(body.verdict, "verdict");
     const { error } = await admin().from("answers").update({ host_verdict: verdict }).eq("id", answer.id);
     if (error) throw new Error(`verdict: ${error.message}`);
@@ -567,6 +638,8 @@ export const actions: Record<string, Action> = {
         hostVerdict: a.host_verdict,
       })),
       check(votes, "votes").map((v) => ({ answerId: v.answer_id, approve: v.approve })),
+      // With only two players nobody can outvote the author, so the single opponent's 👎 decides.
+      m.players.length,
     );
     const { error } = await db.rpc("apply_round_scores", {
       p_round_id: round.id,
@@ -592,6 +665,37 @@ export const actions: Record<string, Action> = {
     return buildState(user, m.game.id);
   },
 };
+
+/** Adds (or refreshes) the player row and keeps their cross-game profile current. */
+async function addPlayer(gameId: string, user: SessionUser): Promise<void> {
+  const db = admin();
+  const now = new Date().toISOString();
+  const [player, profile] = await Promise.all([
+    db.from("players").upsert(
+      {
+        game_id: gameId,
+        user_id: user.userId,
+        username: user.username.slice(0, 64),
+        avatar_url: user.avatarUrl,
+        last_seen_at: now,
+        kicked_at: null,
+      },
+      { onConflict: "game_id,user_id" },
+    ),
+    db.from("profiles").upsert(
+      { user_id: user.userId, username: user.username.slice(0, 64), avatar_url: user.avatarUrl, last_seen_at: now },
+      { onConflict: "user_id" },
+    ),
+  ]);
+  if (player.error) throw new Error(`player: ${player.error.message}`);
+  if (profile.error) throw new Error(`profile: ${profile.error.message}`);
+}
+
+async function claimHostIfFree(game: GameRow, user: SessionUser): Promise<void> {
+  if (game.host_user_id) return;
+  const { error } = await admin().from("games").update({ host_user_id: user.userId }).eq("id", game.id).is("host_user_id", null);
+  if (error) throw new Error(`host: ${error.message}`);
+}
 
 async function votableAnswer(m: Member, body: Body): Promise<AnswerRow> {
   const answerId = uuid(body.answerId, "answerId");

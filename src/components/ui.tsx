@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useI18n, type Locale } from "@/i18n/I18nProvider";
+import { useI18n } from "@/i18n/I18nProvider";
 import type { PlayerView } from "@/lib/types";
+import { Icon } from "./Icon";
 
 function hashHue(text: string): number {
   let h = 0;
@@ -10,29 +11,52 @@ function hashHue(text: string): number {
   return h;
 }
 
-export function Avatar({ name, url, size = 36, dim = false }: { name: string; url: string | null; size?: number; dim?: boolean }) {
+export function Avatar({
+  name,
+  url,
+  size = 38,
+  dim = false,
+  ring,
+}: {
+  name: string;
+  url: string | null;
+  size?: number;
+  dim?: boolean;
+  ring?: string;
+}) {
   const [failed, setFailed] = useState(false);
-  const style = { width: size, height: size, opacity: dim ? 0.45 : 1 };
+  const style = { width: size, height: size, opacity: dim ? 0.55 : 1, border: ring };
   if (url && !failed) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- Discord CDN via URL mapping, next/image can't proxy it
+      // eslint-disable-next-line @next/next/no-img-element -- Discord CDN via URL mapping; next/image can't proxy it
       <img src={url} alt="" width={size} height={size} onError={() => setFailed(true)} className="shrink-0 rounded-full object-cover" style={style} />
     );
   }
   return (
     <span
       aria-hidden
-      className="grid shrink-0 place-items-center rounded-full font-bold text-white"
-      style={{ ...style, background: `hsl(${hashHue(name)} 65% 45%)`, fontSize: size * 0.42 }}
+      className="grid shrink-0 place-items-center rounded-full font-extrabold text-white"
+      style={{ ...style, background: `oklch(68% 0.19 ${hashHue(name)})`, fontSize: size * 0.4 }}
     >
       {Array.from(name.trim())[0]?.toUpperCase() ?? "?"}
     </span>
   );
 }
 
-export function LetterTile({ letter, size = 72, animate = false }: { letter: string; size?: number; animate?: boolean }) {
+export function LetterTile({ letter, size = 100, animate = false }: { letter: string; size?: number; animate?: boolean }) {
   return (
-    <span className={`letter-tile shrink-0 ${animate ? "animate-pop" : ""}`} style={{ width: size, fontSize: size * 0.58 }}>
+    <span
+      className={`headline grid place-items-center text-white ${animate ? "animate-pop-letter" : ""}`}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.26,
+        background: "var(--color-pink)",
+        boxShadow: `0 ${Math.round(size * 0.08)}px 0 var(--color-pink-deep)`,
+        fontSize: size * 0.5,
+        lineHeight: 1,
+      }}
+    >
       {letter}
     </span>
   );
@@ -42,33 +66,33 @@ export function TimerRing({ remainingMs, totalMs }: { remainingMs: number; total
   const { t } = useI18n();
   const seconds = Math.max(0, Math.ceil(remainingMs / 1000));
   const fraction = totalMs > 0 ? Math.min(1, Math.max(0, remainingMs / totalMs)) : 0;
-  const radius = 26;
-  const circumference = 2 * Math.PI * radius;
+  const circumference = 326.7; // r = 52
   const low = seconds <= 5 && remainingMs > 0;
   return (
-    <div className={`relative size-16 shrink-0 ${low ? "animate-pulse" : ""}`} role="timer" aria-label={t("play.timeLeft", { seconds })}>
-      <svg viewBox="0 0 64 64" className="size-16 -rotate-90">
-        <circle cx="32" cy="32" r={radius} fill="none" stroke="var(--color-surface-2)" strokeWidth="6" />
-        <circle
-          cx="32"
-          cy="32"
-          r={radius}
-          fill="none"
-          stroke={low ? "var(--color-bad)" : "var(--color-sun)"}
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - fraction)}
-          style={{ transition: "stroke-dashoffset 250ms linear" }}
-        />
-      </svg>
-      <span className={`absolute inset-0 grid place-items-center text-xl font-extrabold tabular-nums ${low ? "text-bad" : ""}`}>{seconds}</span>
-    </div>
+    <svg width="112" height="112" viewBox="0 0 120 120" role="timer" aria-label={t("play.timeLeft", { seconds })} className="shrink-0">
+      <circle cx="60" cy="60" r="52" fill="none" stroke="var(--color-line)" strokeWidth="8" />
+      <circle
+        cx="60"
+        cy="60"
+        r="52"
+        fill="none"
+        stroke={low ? "var(--color-pink)" : "var(--color-orange)"}
+        strokeWidth="8"
+        strokeLinecap="round"
+        transform="rotate(-90 60 60)"
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - fraction)}
+        style={{ transition: "stroke-dashoffset 1s linear", animation: low ? "ringPulse 0.6s ease infinite" : "none" }}
+      />
+      <text x="60" y="68" textAnchor="middle" fontSize="26" fontWeight="800" fill="var(--color-ink)" fontFamily="var(--font-heading)">
+        {seconds}
+      </text>
+    </svg>
   );
 }
 
-/** Two-step button: avoids window.confirm(), which Discord's sandboxed iframe blocks. */
-export function ConfirmButton({ onConfirm, children, className = "btn btn-sm" }: { onConfirm: () => void; children: ReactNode; className?: string }) {
+/** Two-step button: Discord's sandboxed iframe blocks window.confirm(). */
+export function ConfirmButton({ onConfirm, children, className = "btn btn-ghost btn-sm" }: { onConfirm: () => void; children: ReactNode; className?: string }) {
   const { t } = useI18n();
   const [armed, setArmed] = useState(false);
   useEffect(() => {
@@ -79,7 +103,8 @@ export function ConfirmButton({ onConfirm, children, className = "btn btn-sm" }:
   return (
     <button
       type="button"
-      className={`${className} ${armed ? "border-bad! text-bad!" : ""}`}
+      className={className}
+      style={armed ? { borderColor: "var(--color-pink)", color: "var(--color-pink)" } : undefined}
       onClick={() => {
         if (armed) {
           setArmed(false);
@@ -96,43 +121,46 @@ export function ConfirmButton({ onConfirm, children, className = "btn btn-sm" }:
 
 export function LanguageToggle() {
   const { locale, setLocale, t } = useI18n();
-  const options: { value: Locale; label: string }[] = [
-    { value: "en", label: "EN" },
-    { value: "ar", label: "عربي" },
-  ];
   return (
-    <div role="group" aria-label={t("header.language")} className="flex rounded-full border border-line bg-surface p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          lang={o.value}
-          aria-pressed={locale === o.value}
-          onClick={() => setLocale(o.value)}
-          className={`min-h-8 rounded-full px-3 text-xs font-bold transition-colors ${locale === o.value ? "bg-brand text-white" : "text-muted hover:text-ink"}`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      className="btn btn-outline btn-sm"
+      aria-label={t("header.language")}
+      onClick={() => setLocale(locale === "en" ? "ar" : "en")}
+    >
+      <Icon name="globe" size={16} />
+      <span lang={locale === "en" ? "ar" : "en"}>{locale === "en" ? "العربية" : "English"}</span>
+    </button>
   );
 }
 
-export function PlayerName({ player, meId }: { player: PlayerView; meId: string }) {
+export function PlayerName({ player, meId, onClick }: { player: PlayerView; meId: string; onClick?: () => void }) {
   const { t } = useI18n();
-  return (
-    <span className="flex min-w-0 items-center gap-1.5">
+  const content = (
+    <>
       <span className="truncate font-semibold">{player.username}</span>
       {player.id === meId && <span className="shrink-0 text-xs text-muted">({t("common.you")})</span>}
-      {player.isHost && (
-        <span className="shrink-0" title={t("common.host")} aria-label={t("common.host")}>
-          👑
-        </span>
-      )}
-    </span>
+      {player.isHost && <Icon name="crown" size={15} className="shrink-0 text-amber" />}
+    </>
+  );
+  if (!onClick) return <span className="flex min-w-0 items-center gap-1.5">{content}</span>;
+  return (
+    <button type="button" onClick={onClick} className="flex min-w-0 items-center gap-1.5 text-start hover:underline">
+      {content}
+    </button>
   );
 }
 
-export function Spinner() {
-  return <span aria-hidden className="inline-block size-8 animate-spin rounded-full border-4 border-surface-2 border-t-brand" />;
+export function Spinner({ size = 30 }: { size?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block animate-spin rounded-full"
+      style={{ width: size, height: size, border: "4px solid var(--color-line)", borderTopColor: "var(--color-orange)" }}
+    />
+  );
+}
+
+export function Toast({ children }: { children: ReactNode }) {
+  return <div className="text-center text-xs font-bold text-mint">{children}</div>;
 }

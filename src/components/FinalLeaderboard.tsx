@@ -3,19 +3,19 @@
 import { useI18n } from "@/i18n/I18nProvider";
 import { rankByScore } from "@/lib/ranking";
 import { useGameContext } from "./GameContext";
+import { Icon } from "./Icon";
 import { Avatar, PlayerName } from "./ui";
 
-const CONFETTI_COLORS = ["#ffc93d", "#7b5cff", "#37d99a", "#ff5c74", "#5cc8ff"];
-const PODIUM_HEIGHT: Record<number, string> = { 1: "h-28", 2: "h-20", 3: "h-14" };
-const MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+const CONFETTI_COLORS = ["#ffd166", "#ff8a3d", "#ff5d8f", "#06d6a0", "#7b5cff"];
 
 export function FinalLeaderboard() {
-  const { state, isHost, hostName, call } = useGameContext();
+  const { state, isHost, hostName, call, openProfile } = useGameContext();
   const { t } = useI18n();
   const ranked = rankByScore(state.players);
   const winners = ranked.filter((p) => p.rank === 1);
-  // Visual order 2nd · 1st · 3rd (flex follows the document direction, so RTL mirrors naturally)
+  // Visual order 2nd · 1st · 3rd (flex follows document direction, so RTL mirrors it)
   const podium = [ranked[1], ranked[0], ranked[2]].filter(Boolean);
+  const rest = ranked.slice(3);
 
   const headline =
     winners.length === 1
@@ -23,55 +23,68 @@ export function FinalLeaderboard() {
       : t("final.tie", { names: winners.map((w) => w.username).join(t("final.listSeparator")) });
 
   return (
-    <div className="animate-rise space-y-4">
+    <div className="animate-rise relative flex flex-col items-center gap-5 overflow-hidden pb-3">
       <Confetti />
-      <div className="card text-center">
-        <p className="text-sm font-bold uppercase tracking-wide text-muted">{t("final.title")}</p>
-        <h2 className="mt-1 text-2xl font-black text-sun sm:text-3xl" dir="auto">
-          🏆 {headline}
-        </h2>
+      <h2 className="headline text-center text-[28px]">{t("final.title")} 🎊</h2>
+      <p className="text-center text-[17px] font-bold text-orange" dir="auto">
+        {headline}
+      </p>
 
-        <div className="mt-6 flex items-end justify-center gap-2 sm:gap-4">
-          {podium.map((p) => (
-            <div key={p.id} className="flex w-24 min-w-0 flex-col items-center sm:w-32">
-              <span className="text-2xl">{p.rank === 1 ? "👑" : MEDAL[p.rank] ?? ""}</span>
-              <Avatar name={p.username} url={p.avatarUrl} size={p.rank === 1 ? 64 : 48} />
-              <span className="mt-1 w-full truncate text-sm font-bold">{p.username}</span>
-              <span className="text-xs font-bold tabular-nums text-muted">{t("common.points", { count: p.score })}</span>
-              <div
-                className={`mt-2 w-full rounded-t-xl ${PODIUM_HEIGHT[p.rank] ?? "h-10"} ${
-                  p.rank === 1 ? "bg-sun/80" : p.rank === 2 ? "bg-brand/60" : "bg-surface-2"
-                } grid place-items-center text-2xl font-black text-bg`}
-              >
-                {p.rank}
-              </div>
+      <div className="flex w-full items-end justify-center gap-3">
+        {podium.map((p) => (
+          <div key={p.id} className="flex w-[92px] flex-col items-center gap-1.5">
+            {p.rank === 1 && <Icon name="crown" size={24} className="text-amber" filled />}
+            <Avatar
+              name={p.username}
+              url={p.avatarUrl}
+              size={p.rank === 1 ? 58 : 46}
+              ring={p.rank === 1 ? "3px solid var(--color-amber)" : "2px solid var(--color-line)"}
+            />
+            <button type="button" className="w-full truncate text-center text-[12px] font-bold" onClick={() => openProfile(p.userId)}>
+              {p.username}
+            </button>
+            <span className="headline text-orange">{p.score}</span>
+            <div
+              className="headline flex w-full justify-center rounded-t-[10px] pt-1.5 text-[20px]"
+              style={{
+                height: p.rank === 1 ? 66 : p.rank === 2 ? 48 : 34,
+                background: p.rank === 1 ? "var(--color-sun)" : "var(--color-card)",
+                border: p.rank === 1 ? "none" : "2px solid var(--color-line)",
+                color: p.rank === 1 ? "var(--color-ink)" : "var(--color-sand)",
+              }}
+            >
+              {p.rank}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {rest.length > 0 && (
+        <div className="flex w-full flex-col gap-1.5">
+          {rest.map((p) => (
+            <div key={p.id} className="flex items-center gap-3 rounded-[14px] border-2 border-line bg-card px-3 py-2">
+              <span className="headline w-5 text-[13px] text-sand">{p.rank}</span>
+              <Avatar name={p.username} url={p.avatarUrl} size={28} />
+              <span className="min-w-0 flex-1 text-[13px]">
+                <PlayerName player={p} meId={state.me.playerId} onClick={() => openProfile(p.userId)} />
+              </span>
+              <span className="headline text-[14px] text-orange">{p.score}</span>
             </div>
           ))}
         </div>
-      </div>
+      )}
 
-      <ol className="card space-y-2">
-        {ranked.map((p) => (
-          <li key={p.id} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${p.rank === 1 ? "bg-sun/10 ring-1 ring-sun/40" : "bg-surface-2"}`}>
-            <span className="w-7 text-center text-lg font-extrabold tabular-nums">{MEDAL[p.rank] ?? p.rank}</span>
-            <Avatar name={p.username} url={p.avatarUrl} size={34} />
-            <span className="min-w-0 flex-1">
-              <PlayerName player={p} meId={state.me.playerId} />
-            </span>
-            <span className="text-lg font-extrabold tabular-nums">{p.score}</span>
-          </li>
-        ))}
-      </ol>
-
-      <div className="sticky bottom-3 z-10">
+      <div className="sticky bottom-3 z-10 w-full">
         {isHost ? (
-          <button type="button" className="btn btn-sun w-full text-lg shadow-xl" onClick={() => void call("lobby")}>
-            🔁 {t("final.playAgain")}
+          <button type="button" className="btn btn-primary w-full text-base" onClick={() => void call("lobby")}>
+            <Icon name="replay" size={18} />
+            {t("final.playAgain")}
           </button>
         ) : (
-          <p className="rounded-xl border border-line bg-surface/95 px-4 py-3 text-center text-sm text-muted shadow-xl backdrop-blur">
+          <div className="waiting">
+            <Icon name="hourglass" size={16} className="me-1.5 inline" />
             {t("final.waitingHost", { name: hostName })}
-          </p>
+          </div>
         )}
       </div>
     </div>
@@ -81,15 +94,15 @@ export function FinalLeaderboard() {
 function Confetti() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-      {Array.from({ length: 48 }, (_, i) => (
+      {Array.from({ length: 40 }, (_, i) => (
         <span
           key={i}
           className="confetti"
           style={{
-            insetInlineStart: `${(i * 37) % 100}%`,
+            insetInlineStart: `${(i * 41) % 100}%`,
             background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-            animationDelay: `${(i % 12) * 0.2}s`,
-            animationDuration: `${2.6 + (i % 5) * 0.4}s`,
+            animationDelay: `${(i % 7) * 0.3}s`,
+            animationDuration: `${2.4 + (i % 5) * 0.4}s`,
           }}
         />
       ))}

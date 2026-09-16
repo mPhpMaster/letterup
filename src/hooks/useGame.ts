@@ -15,7 +15,8 @@ export type CallGame = (
   opts?: { silent?: boolean },
 ) => Promise<GameState | null>;
 
-export function useGame(token: string, initial: GameState) {
+/** `token` is the Discord Activity session token; browser players authenticate with a cookie instead. */
+export function useGame(token: string | null, initial: GameState) {
   const gameId = initial.game.id;
   const [state, setState] = useState(initial);
   const [offset, setOffset] = useState(() => initial.serverNow - Date.now());
@@ -31,7 +32,7 @@ export function useGame(token: string, initial: GameState) {
       const id = ++seq.current;
       const sentAt = Date.now();
       try {
-        const next = await postJson<GameState>(`/api/game/${action}`, { ...body, gameId }, token);
+        const next = await postJson<GameState>(`/api/game/${action}`, { ...body, gameId }, token ?? undefined);
         const receivedAt = Date.now();
         const rtt = receivedAt - sentAt;
         // Clock sync: keep the lowest-latency sample, refreshed at least once a minute.
