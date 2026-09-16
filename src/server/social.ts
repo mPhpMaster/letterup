@@ -1,6 +1,7 @@
 import { admin } from "./supabase-admin";
 import { HttpError } from "./errors";
-import type { FriendView, InviteView, ProfileView, SearchResultView, SessionUser, SocialState } from "@/lib/types";
+import { levelFromPoints, percent, topLetters, trendPercent, winStreaks } from "@/lib/profileStats";
+import type { FriendView, InviteView, ProfileDetails, ProfileView, SearchResultView, SessionUser, SocialState } from "@/lib/types";
 
 const ONLINE_MS = 60_000;
 const INVITE_TTL_MS = 2 * 60 * 60 * 1000;
@@ -17,6 +18,16 @@ interface ProfileRow {
   last_seen_at: string;
   banned_at?: string | null;
   ban_reason?: string | null;
+  created_at?: string;
+  // Added by the profile-details migration; absent until it runs.
+  detail_rounds?: number;
+  rounds_complete?: number;
+  submit_count?: number;
+  submit_ms_total?: number;
+  fastest_submit_ms?: number | null;
+  pressure_rounds?: number;
+  answers_given?: number;
+  valid_answers?: number;
 }
 
 /** Keeps the cross-game profile in step with the Discord display name/avatar. */
@@ -114,7 +125,12 @@ export async function getProfile(viewer: SessionUser, targetId: string): Promise
     db.from("follows").select("*", { count: "exact", head: true }).eq("followee_id", targetId),
     db.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", targetId),
   ]);
-  return toProfileView(row, {
+  const details = await loadProfileDetails(row).catch((err) => {
+    // The card still works on the lifetime counters if the detail tables are missing.
+    console.error("[profile details]", err instanceof Error ? err.message : err);
+    return null;
+  });
+  const view = toProfileView(row, {
     isMe: targetId === viewer.userId,
     isFollowing: !!following.data,
     isFollowedBy: !!followedBy.data,
@@ -123,6 +139,97 @@ export async function getProfile(viewer: SessionUser, targetId: string): Promise
     followers: followerCount.count ?? 0,
     following: followingCount.count ?? 0,
   });
+  return { ...view, details };
+}
+
+/** Rank, level and the recorded history behind the full profile card. */
+async function loadProfileDetails(row: ProfileRow): Promise<ProfileDetails> {
+  const db = admin();
+  const userId = row.user_id;
+  const p = row.total_points;
+  const w = row.wins;
+  const g = row.games_played;
+  const aheadFilter = [
+    "total_points.gt." + p,
+    "and(total_points.eq." + p + ",wins.gt." + w + ")",
+    "and(total_points.eq." + p + ",wins.eq." + w + ",games_played.lt." + g + ")",
+  ].join(",");
+
+  const [ahead, results, categories, uniqueWords, longest, letters] = await Promise.all([
+    // Same order as the leaderboard RPC: points, then wins, then fewer games.
+    row.banned_at || g === 0
+      ? Promise.resolve({ count: null, error: null })
+      : db.from("profiles").select("user_id", { count: "exact", head: true }).is("banned_at", null).gt("games_played", 0).or(aheadFilter),
+    db
+      .from("game_results")
+      .select("score, place, players, won, tied, finished_at")
+      .eq("user_id", userId)
+      .order("finished_at", { ascending: true })
+      .limit(2000)
+      .returns<{ score: number; place: number; players: number; won: boolean; tied: boolean; finished_at: string }[]>(),
+    db
+      .from("profile_category_stats")
+      .select("category, answered, valid")
+      .eq("user_id", userId)
+      .order("answered", { ascending: false })
+      .returns<{ category: string; answered: number; valid: number }[]>(),
+    db.from("profile_words").select("word", { count: "exact", head: true }).eq("user_id", userId),
+    db.from("profile_words").select("value").eq("user_id", userId).order("length", { ascending: false }).limit(1).returns<{ value: string }[]>(),
+    db.from("profile_words").select("letter").eq("user_id", userId).limit(5000).returns<{ letter: string }[]>(),
+  ]);
+  if (ahead.error) throw new Error(ahead.error.message);
+  // The history tables come from the profile-details migration. If any of them is
+  // missing or fails, that part of the card shows its empty state -- rank, level and
+  // losses only need the profile row and still show.
+  for (const r of [results, categories, uniqueWords, longest, letters]) {
+    if (r.error) console.error("[profile details]", r.error.message);
+  }
+
+  const history = results.error ? [] : (results.data ?? []);
+  const recent = history.slice(-7);
+  const streaks = winStreaks(history);
+  const duels = history.filter((r) => r.players === 2);
+  const groups = history.filter((r) => r.players >= 3);
+  const winsIn = (rs: typeof history) => rs.filter((r) => r.won || r.tied).length;
+  const level = levelFromPoints(p);
+  const valid = row.valid_answers ?? 0;
+  const submits = row.submit_count ?? 0;
+  const detailRounds = row.detail_rounds ?? 0;
+  const tenths = (ms: number) => Math.round(ms / 100) / 10;
+
+  return {
+    rank: ahead.count === null ? null : ahead.count + 1,
+    memberSince: Date.parse(row.created_at ?? row.last_seen_at),
+    level: level.level,
+    levelXp: level.xp,
+    levelXpNeeded: level.needed,
+    recordedGames: history.length,
+    recentGames: recent.map((r) => ({
+      score: r.score,
+      place: r.place,
+      players: r.players,
+      won: r.won,
+      tied: r.tied,
+      finishedAt: Date.parse(r.finished_at),
+    })),
+    trendPercent: trendPercent(recent.map((r) => r.score)),
+    currentStreak: streaks.current,
+    longestStreak: streaks.longest,
+    sharedWins: history.filter((r) => r.tied).length,
+    // Lifetime wins already include shared first places.
+    losses: Math.max(0, g - w),
+    duelWinPercent: percent(winsIn(duels), duels.length),
+    groupWinPercent: percent(winsIn(groups), groups.length),
+    categories: categories.error ? [] : (categories.data ?? []),
+    roundsCompletePercent: percent(row.rounds_complete ?? 0, detailRounds),
+    averageSubmitSeconds: submits > 0 ? tenths((row.submit_ms_total ?? 0) / submits) : null,
+    fastestSubmitSeconds: row.fastest_submit_ms != null ? tenths(row.fastest_submit_ms) : null,
+    pressurePercent: percent(row.pressure_rounds ?? 0, detailRounds),
+    approvedWords: valid,
+    uniqueWordsPercent: uniqueWords.error ? null : percent(uniqueWords.count ?? 0, valid),
+    longestWord: longest.error ? null : (longest.data?.[0]?.value ?? null),
+    topLetters: letters.error ? [] : topLetters((letters.data ?? []).map((l) => l.letter)),
+  };
 }
 
 export async function setFollow(viewer: SessionUser, targetId: string, follow: boolean): Promise<void> {

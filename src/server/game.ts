@@ -611,6 +611,12 @@ export const actions: Record<string, Action> = {
       // Lifetime stats for the profile cards; the RPC only counts each game once.
       const stats = await db.rpc("record_game_stats", { p_game_id: m.game.id });
       if (stats.error) console.error("[record_game_stats]", stats.error.message);
+      // The history behind the full profile card (trend, streaks, categories, words,
+      // speed). Separate so a missing migration can't block finishing the game.
+      if (stats.data === true) {
+        const details = await db.rpc("record_game_details", { p_game_id: m.game.id });
+        if (details.error) console.error("[record_game_details]", details.error.message);
+      }
       await touch(m.game.id);
       return buildState(user, m.game.id);
     }
@@ -745,7 +751,14 @@ export const actions: Record<string, Action> = {
     if (m.game.status === "lobby") return buildState(user, m.game.id);
     const db = admin();
     const [g, p] = await Promise.all([
-      db.from("games").update({ status: "lobby", current_round: 0, used_letters: [] }).eq("id", m.game.id),
+      // A room can be played again and again. Clearing the "recorded" stamps lets the
+      // next finish count too -- without it only a room's first game ever reached
+      // anyone's profile. Each finish still records once: next() only finishes from
+      // results, and the stamps are set again as it does.
+      db
+        .from("games")
+        .update({ status: "lobby", current_round: 0, used_letters: [], stats_recorded_at: null, details_recorded_at: null })
+        .eq("id", m.game.id),
       db.from("players").update({ is_ready: false }).eq("game_id", m.game.id),
     ]);
     if (g.error) throw new Error(`lobby: ${g.error.message}`);

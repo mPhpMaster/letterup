@@ -324,6 +324,14 @@ export default function App() {
           profile={profile}
           loading={!profile}
           myRoomCode={phase.kind === "game" ? phase.state.game.roomCode : null}
+          canChallenge={phase.kind === "game"}
+          onChallenge={(userId) => {
+            if (phase.kind !== "game") return;
+            // A challenge is an invite into the room you're in; the server checks you follow them.
+            postJson("/api/social/invite", { userId, gameId: phase.state.game.id }, token ?? undefined)
+              .then(() => flash(t("profile.challengeSent")))
+              .catch((err) => flash(err instanceof Error ? err.message : t("errors.generic")));
+          }}
           isAdmin={isAdmin}
           onClose={() => setProfileId(null)}
           onToggleFollow={(userId, follow) => {

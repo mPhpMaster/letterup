@@ -114,6 +114,53 @@ export interface ProfileView {
   lastSeenAt: number;
   isBanned: boolean;
   banReason: string | null;
+  /** The full profile card's numbers; only filled in when one profile is opened. */
+  details?: ProfileDetails | null;
+}
+
+export interface GameResultView {
+  score: number;
+  place: number;
+  players: number;
+  won: boolean;
+  /** Top score shared with someone else. */
+  tied: boolean;
+  finishedAt: number;
+}
+
+/**
+ * Everything beyond the lifetime counters. The history behind most of it is only
+ * recorded for games finished after the profile-details migration, so each part is
+ * null or empty until there is data for it -- the card shows an empty state, not zeros.
+ */
+export interface ProfileDetails {
+  /** Position on the global leaderboard; null before a first finished game or when banned. */
+  rank: number | null;
+  memberSince: number;
+  level: number;
+  levelXp: number;
+  levelXpNeeded: number;
+  /** Games with a recorded result (the source of trend, streaks and the 1v1/group split). */
+  recordedGames: number;
+  /** Oldest first, at most seven. */
+  recentGames: GameResultView[];
+  trendPercent: number | null;
+  currentStreak: number;
+  longestStreak: number;
+  sharedWins: number;
+  losses: number;
+  duelWinPercent: number | null;
+  groupWinPercent: number | null;
+  /** Most played first. */
+  categories: { category: string; answered: number; valid: number }[];
+  roundsCompletePercent: number | null;
+  averageSubmitSeconds: number | null;
+  fastestSubmitSeconds: number | null;
+  pressurePercent: number | null;
+  approvedWords: number;
+  uniqueWordsPercent: number | null;
+  longestWord: string | null;
+  topLetters: string[];
 }
 
 export interface FriendView {
