@@ -7,8 +7,8 @@ import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
 import { LetterTile, TimerRing } from "./ui";
 
-/** Matches the window the server stamps on the round when voting opens. */
-const SECONDS_PER_PLAYER = 5;
+/** Matches the window the server stamps on the round: per player, per category. */
+const SECONDS_PER_PLAYER_PER_CATEGORY = 5;
 
 export function Voting() {
   const { state, isHost, hostName, offset, call } = useGameContext();
@@ -40,7 +40,10 @@ export function Voting() {
           {isHost && <p className="mt-1 text-[11px] font-bold text-orange">{t("vote.hostHelp")}</p>}
         </div>
         {round.voteEndsAt !== null && (
-          <TimerRing remainingMs={round.voteEndsAt - now} totalMs={Math.max(1, state.players.length * SECONDS_PER_PLAYER * 1000)} />
+          <TimerRing
+            remainingMs={round.voteEndsAt - now}
+            totalMs={Math.max(1, state.players.length * total * SECONDS_PER_PLAYER_PER_CATEGORY * 1000)}
+          />
         )}
       </div>
 
