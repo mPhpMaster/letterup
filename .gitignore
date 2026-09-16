@@ -11,3 +11,7 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Written by next dev on every run; turn it off with agentRules: false in next.config
+AGENTS.md
+CLAUDE.md
