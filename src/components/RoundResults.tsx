@@ -72,7 +72,7 @@ export function RoundResults() {
         <details className="group mt-5">
           <summary className="btn btn-ghost w-full cursor-pointer list-none">
             {t("results.showAnswers")}
-            <Icon name="arrowRight" size={16} className="transition-transform group-open:rotate-90 rtl:-scale-x-100" />
+            <Icon name="arrowRight" size={16} className="transition-transform group-open:rotate-90 rtl:-scale-x-100 rtl:group-open:-rotate-90" />
           </summary>
           <div className="mt-4">
             <AnswersBoard mode="final" />

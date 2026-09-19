@@ -533,7 +533,21 @@ export const actions: Record<string, Action> = {
     if (!/^[A-Z0-9]{4,8}$/.test(raw)) throw new HttpError(400, "Invalid room code");
     const db = admin();
     const game = check(await db.from("games").select("*").eq("room_code", raw).maybeSingle<GameRow>(), "room");
-    if (game.status === "finished") throw new HttpError(409, "That game has already finished");
+    if (game.status === "finished") {
+      // Someone who played can come back to the final results (a refresh, a closed tab);
+      // nobody new can join a game that's over.
+      const played = await db
+        .from("players")
+        .select("id")
+        .eq("game_id", game.id)
+        .eq("user_id", user.userId)
+        .is("kicked_at", null)
+        .is("left_at", null)
+        .maybeSingle();
+      if (played.error) throw new Error(`join: ${played.error.message}`);
+      if (!played.data) throw new HttpError(409, "That game has already finished");
+      return buildState(user, game.id);
+    }
 
     if (game.password_hash) {
       const already = await db

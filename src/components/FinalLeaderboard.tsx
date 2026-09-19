@@ -88,7 +88,7 @@ export function FinalLeaderboard() {
                 <div className="flex min-w-0 items-center gap-2.5">
                   <Avatar name={p.username} url={p.avatarUrl} size={34} />
                   <span className="flex min-w-0 text-sm">
-                    <PlayerName player={p} meId={state.me.playerId} onClick={() => openProfile(p.userId)} />
+                    <PlayerName player={p} meId={state.me.playerId} showCrown={false} onClick={() => openProfile(p.userId)} />
                   </span>
                 </div>
                 <span className="headline text-lg tabular-nums">{t("final.points", { count: p.score })}</span>
@@ -101,7 +101,7 @@ export function FinalLeaderboard() {
           <details className="group mt-5 text-start">
             <summary className="btn btn-ghost w-full cursor-pointer list-none">
               {t("final.lastRoundAnswers", { letter: round.letter })}
-              <Icon name="arrowRight" size={16} className="transition-transform group-open:rotate-90 rtl:-scale-x-100" />
+              <Icon name="arrowRight" size={16} className="transition-transform group-open:rotate-90 rtl:-scale-x-100 rtl:group-open:-rotate-90" />
             </summary>
             <div className="mt-4">
               <AnswersBoard mode="final" />
