@@ -637,8 +637,9 @@ function GameScreen({
             </button>
           )}
           {inGame && ctx.isHost && (
-            <ConfirmButton compact className="tool" onConfirm={() => void call("lobby")}>
-              <Icon name="replay" size={17} />
+            // Ends the game for everyone and shows the final leaderboard with the scores so far.
+            <ConfirmButton compact className="tool" onConfirm={() => void call("endGame")}>
+              <Icon name="trophy" size={17} />
               <span className="sr-only">{t("header.endGame")}</span>
             </ConfirmButton>
           )}

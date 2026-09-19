@@ -292,19 +292,7 @@ async function closeCategoryOnTimeout(round: RoundRow, playerCount: number): Pro
 async function advanceFromResults(core: Core): Promise<void> {
   const db = admin();
   if (core.game.current_round >= core.settings.total_rounds) {
-    const finished = await db.from("games").update({ status: "finished" }).eq("id", core.game.id).eq("status", "results").select("id");
-    if (finished.error) throw new Error(`finish: ${finished.error.message}`);
-    if (finished.data.length === 0) return;
-    // Lifetime stats for the profile cards; the RPC only counts each game once.
-    const stats = await db.rpc("record_game_stats", { p_game_id: core.game.id });
-    if (stats.error) console.error("[record_game_stats]", stats.error.message);
-    // The history behind the full profile card (trend, streaks, categories, words,
-    // speed). Separate so a missing migration can't block finishing the game.
-    if (stats.data === true) {
-      const details = await db.rpc("record_game_details", { p_game_id: core.game.id });
-      if (details.error) console.error("[record_game_details]", details.error.message);
-    }
-    await touch(core.game.id);
+    await finishGame(core.game.id, ["results"]);
     return;
   }
 
@@ -316,6 +304,32 @@ async function advanceFromResults(core: Core): Promise<void> {
     p_reveal_seconds: REVEAL_SECONDS,
   });
   if (error) throw new Error(`start_round: ${error.message}`);
+}
+
+/**
+ * Move the game to the final leaderboard -- only from one of `from`, so two callers
+ * racing (the last scoreboard timing out, the host ending early) finish it once.
+ */
+async function finishGame(gameId: string, from: GameStatus[]): Promise<void> {
+  const db = admin();
+  const finished = await db.from("games").update({ status: "finished" }).eq("id", gameId).in("status", from).select("id");
+  if (finished.error) throw new Error(`finish: ${finished.error.message}`);
+  if (finished.data.length === 0) return;
+  // Ended before any round was scored: nothing happened worth a profile's game count.
+  const scored = await db.from("rounds").select("id", { count: "exact", head: true }).eq("game_id", gameId).eq("status", "scored");
+  if (scored.error) console.error("[finish rounds]", scored.error.message);
+  if ((scored.count ?? 0) > 0) {
+    // Lifetime stats for the profile cards; the RPC only counts each game once.
+    const stats = await db.rpc("record_game_stats", { p_game_id: gameId });
+    if (stats.error) console.error("[record_game_stats]", stats.error.message);
+    // The history behind the full profile card (trend, streaks, categories, words,
+    // speed). Separate so a missing migration can't block finishing the game.
+    if (stats.data === true) {
+      const details = await db.rpc("record_game_details", { p_game_id: gameId });
+      if (details.error) console.error("[record_game_details]", details.error.message);
+    }
+  }
+  await touch(gameId);
 }
 
 // ---------------------------------------------------------------------------
@@ -786,6 +800,36 @@ export const actions: Record<string, Action> = {
         await touch(m.game.id);
       }
     }
+    return buildState(user, m.game.id);
+  },
+
+  /** Take back "Done" to keep editing, while the round is still open. */
+  async unsubmit(user, body) {
+    const m = await requireMember(user, body);
+    requireStatus(m, "playing");
+    const round = await currentRound(m.game);
+    if (!round || round.id !== uuid(body.roundId, "roundId") || round.status !== "playing") {
+      throw new HttpError(409, "Round is closed");
+    }
+    if (Date.now() > Date.parse(round.ends_at)) throw new HttpError(409, "Time is up");
+    const { error } = await admin().from("submissions").delete().eq("round_id", round.id).eq("player_id", m.me.id);
+    if (error) throw new Error(`unsubmit: ${error.message}`);
+    await touch(m.game.id);
+    return buildState(user, m.game.id);
+  },
+
+  /** Host ends the game now: straight to the final leaderboard with the scores so far. */
+  async endGame(user, body) {
+    const m = await requireMember(user, body);
+    requireHost(m);
+    requireStatus(m, "playing", "voting", "results");
+    // Mid-vote, the answers are in and judged as far as anyone got: keep those points
+    // rather than throw the round away. A round still being answered is dropped.
+    if (m.game.status === "voting") {
+      const round = await currentRound(m.game);
+      if (round && round.status === "voting") await settleRound(m, round);
+    }
+    await finishGame(m.game.id, ["playing", "voting", "results"]);
     return buildState(user, m.game.id);
   },
 

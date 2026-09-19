@@ -25,7 +25,10 @@ export function FinalLeaderboard() {
   // Nobody scoring is not a win -- no crown, no trophy, no confetti.
   const someoneScored = topScore > 0;
   const winners = someoneScored ? ranked.filter((p) => p.rank === 1) : [];
-  const round = state.round;
+  // Ended early by the host, the last round may never have been scored: don't show
+  // its unjudged answers or count it.
+  const round = state.round?.status === "scored" ? state.round : null;
+  const roundsPlayed = state.round?.status === "scored" ? state.game.currentRound : Math.max(0, state.game.currentRound - 1);
 
   useEffect(() => {
     play(someoneScored ? "fanfare" : "click");
@@ -41,7 +44,11 @@ export function FinalLeaderboard() {
     <div className="relative mx-auto flex w-full max-w-xl flex-col gap-5">
       {someoneScored && <Confetti />}
       <section className="card-pop animate-rise relative overflow-hidden text-center">
-        <p className="kicker">{t("final.kicker", { count: state.game.currentRound })}</p>
+        <p className="kicker">{roundsPlayed === 0
+            ? t("final.endedBeforeAnyRound")
+            : roundsPlayed < state.settings.totalRounds
+              ? t("final.endedEarly", { count: roundsPlayed })
+              : t("final.kicker", { count: roundsPlayed })}</p>
         <h2 className="headline mt-1 text-3xl text-brand">{t("final.title")} 🎊</h2>
         <p className="headline mt-2 text-lg text-ink" dir="auto">
           {headline}

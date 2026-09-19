@@ -122,12 +122,25 @@
     "endNow": "End round now",
     "timeLeft": "{seconds} seconds left",
     "beatTheClock": "Beat the clock, name everything!",
-    "secondsLeft": "{seconds}s left"
+    "secondsLeft": "{seconds}s left",
+    "tapToEdit": "Tap to edit again",
+    "emptyTitle_one": "You left 1 answer empty",
+    "emptyTitle_other": "You left {count} answers empty",
+    "keepWriting": "Keep writing",
+    "submitAnyway": "Submit anyway",
+    "voice": "Say your {category} answer",
+    "voiceStop": "Stop listening",
+    "voiceListening": "Listening… say your {category} answer",
+    "voiceError": {
+      "denied": "Microphone blocked — allow it in your browser to answer by voice.",
+      "unavailable": "Voice input isn't available here. Try Chrome, Edge or Safari.",
+      "nothing": "Didn't catch that — tap the mic and try again."
+    }
   },
   "vote": {
     "title": "Vote on the answers",
-    "help": "Give 👍 or 👎 to other players' answers. An answer is thrown out if more players reject it than accept it (its author counts as one 👍).",
-    "helpTwoPlayers": "With two players your 👎 decides: reject an answer and it scores nothing.",
+    "help": "Give 👍 or 👎 to other players' answers. An answer is thrown out if more players reject it than accept it (its author counts as one 👍). A 👍 can also rescue an answer marked “wrong letter” (like salim for س).",
+    "helpTwoPlayers": "With two players your 👎 decides: reject an answer and it scores nothing. A 👍 can also rescue an answer marked “wrong letter” (like salim for س).",
     "rules": "Unique valid answer: 10 · Shared answer: 5 · Invalid or blank: 0",
     "hostHelp": "As host you can overrule other players' answers with ✓ or ✗.",
     "noAnswer": "No answer",
@@ -150,7 +163,8 @@
     "waitingHost": "Waiting for {name} to confirm the scores…",
     "legendUnique": "Unique · 10",
     "legendShared": "Shared · 5",
-    "legendInvalid": "Invalid · 0"
+    "legendInvalid": "Invalid · 0",
+    "wrongLetterVote": "Wrong letter · 👍 to accept"
   },
   "results": {
     "title": "Round {number} results",
@@ -178,7 +192,10 @@
     "points_one": "{count} pt",
     "points_other": "{count} pts",
     "lastRoundAnswers": "Last round's answers ({letter})",
-    "leave": "Leave room"
+    "leave": "Leave room",
+    "endedEarly_one": "Ended early · 1 round",
+    "endedEarly_other": "Ended early · {count} rounds",
+    "endedBeforeAnyRound": "Ended early · no rounds played"
   },
   "friends": {
     "title": "Friends",

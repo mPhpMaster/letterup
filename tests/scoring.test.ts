@@ -53,3 +53,20 @@ test("host verdict overrides votes and letter check, but never blanks", () => {
   assert.equal(isAnswerValid(ans("a", "p1", "human", "bob", { hostVerdict: false }), [], 3), false);
   assert.equal(isAnswerValid(ans("a", "p1", "human", "", { hostVerdict: true }), [], 3), false);
 });
+
+test("players can vote a wrong-letter answer in (e.g. سليم written as salim)", () => {
+  const a = ans("a", "p1", "human", "salim", { autoValid: false });
+  assert.equal(isAnswerValid(a, [], 3), false, "no votes: the letter check stands");
+  assert.equal(isAnswerValid(a, [{ answerId: "a", approve: true }], 3), true, "one 👍 and no 👎");
+  assert.equal(isAnswerValid(a, [{ answerId: "a", approve: true }], 2), true, "the only opponent accepts");
+  assert.equal(
+    isAnswerValid(a, [{ answerId: "a", approve: true }, { answerId: "a", approve: false }], 3),
+    false,
+    "a tie doesn't overturn it -- the author's own 👍 doesn't count here",
+  );
+  assert.equal(
+    isAnswerValid(a, [{ answerId: "a", approve: true }, { answerId: "a", approve: true }, { answerId: "a", approve: false }], 4),
+    true,
+  );
+  assert.equal(computeRoundScores([a], [{ answerId: "a", approve: true }], 3)[0].points, 10);
+});

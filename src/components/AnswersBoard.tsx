@@ -167,7 +167,7 @@ function AnswerRow({
     ? t("vote.noAnswer")
     : !valid
       ? answer && !answer.autoValid
-        ? t("vote.wrongLetter")
+        ? t(mode === "vote" ? "vote.wrongLetterVote" : "vote.wrongLetter")
         : t("vote.rejected")
       : duplicate
         ? t("vote.duplicate")
@@ -188,6 +188,8 @@ function AnswerRow({
               {mine ? `${player.username} (${t("common.you")})` : player.username}
             </button>
             {answer?.hostVerdict != null && <span className="shrink-0 text-grape">· {t("vote.hostRuled")}</span>}
+            {/* The badge is hidden on narrow panels (Discord's included); keep the verdict readable there. */}
+            {hasValue && status === "rejected" && <span className="truncate text-brand sm:hidden">· {statusLabel}</span>}
           </p>
         </div>
       </div>

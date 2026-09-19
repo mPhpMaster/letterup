@@ -5,9 +5,10 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { normalizeAnswer, startsWithLetter } from "@/lib/letters";
 import { useSound } from "@/lib/sound";
 import { useServerNow } from "@/hooks/useGame";
+import { useSpeechInput, type SpeechError } from "@/hooks/useSpeechInput";
 import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
-import { Avatar, CategoryTile, LetterTile, TimerRing } from "./ui";
+import { Avatar, CategoryTile, ConfirmButton, LetterTile, TimerRing } from "./ui";
 
 const AUTOSAVE_MS = 1_000;
 const REFRESH_AFTER_TIMEUP_MS = 2_600; // just past the server's answer grace window
@@ -27,11 +28,29 @@ export function RoundPlay() {
   const phase = now < round.startedAt ? "reveal" : now < round.endsAt ? "answer" : "timeup";
   const submitted = round.submittedPlayerIds.includes(state.me.playerId);
   const locked = submitted || phase !== "answer";
+  // Categories left blank when "Done" was pressed: ask before locking them in.
+  const [emptyWarning, setEmptyWarning] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (phase !== "answer") setEmptyWarning(null);
+  }, [phase]);
 
   const save = useCallback(
     (submit: boolean) => {
       dirty.current = false;
-      return call("answers", { roundId: round.id, answers: draftsRef.current, submit }, { silent: !submit });
+      return call(
+        "answers",
+        { roundId: round.id, answers: draftsRef.current, submit },
+        {
+          silent: !submit,
+          // Lock the fields on the tap, not a round trip later.
+          optimistic: submit
+            ? (s) =>
+                s.round && !s.round.submittedPlayerIds.includes(s.me.playerId)
+                  ? { ...s, round: { ...s.round, submittedPlayerIds: [...s.round.submittedPlayerIds, s.me.playerId] } }
+                  : s
+            : undefined,
+        },
+      );
     },
     [call, round.id],
   );
@@ -69,6 +88,41 @@ export function RoundPlay() {
     lastTick.current = secondsLeft;
     play("tick");
   }, [phase, secondsLeft, play]);
+
+  // Voice answers, in the round's language. Only offered where the browser can do it.
+  const [speechNote, setSpeechNote] = useState<SpeechError | null>(null);
+  const speech = useSpeechInput(
+    round.letterLocale,
+    (category, text) => setDraft(category, text),
+    (error) => setSpeechNote(error),
+  );
+  useEffect(() => {
+    if (locked) speech.stop();
+  }, [locked, speech.stop]);
+  useEffect(() => {
+    if (!speechNote) return;
+    const id = setTimeout(() => setSpeechNote(null), 3500);
+    return () => clearTimeout(id);
+  }, [speechNote]);
+
+  const submit = () => {
+    setEmptyWarning(null);
+    play("submit");
+    void save(true);
+  };
+
+  // Take "Done" back to change something -- only while the clock is still running.
+  const unsubmit = () => {
+    play("click");
+    void call(
+      "unsubmit",
+      { roundId: round.id },
+      {
+        optimistic: (s) =>
+          s.round ? { ...s, round: { ...s.round, submittedPlayerIds: s.round.submittedPlayerIds.filter((id) => id !== s.me.playerId) } } : s,
+      },
+    );
+  };
 
   const setDraft = (category: string, value: string) => {
     dirty.current = true;
@@ -137,8 +191,12 @@ export function RoundPlay() {
         onSubmit={(e) => {
           e.preventDefault();
           if (locked) return;
-          play("submit");
-          void save(true);
+          const empty = round.categories.filter((c) => !(draftsRef.current[c] ?? "").trim());
+          if (empty.length > 0) {
+            setEmptyWarning(empty);
+            return;
+          }
+          submit();
         }}
       >
         <div className="grid gap-3 sm:grid-cols-2">
@@ -192,10 +250,58 @@ export function RoundPlay() {
                     }}
                   />
                 </span>
+                {speech.supported && !locked && (
+                  <button
+                    type="button"
+                    className={`grid size-10 shrink-0 place-items-center rounded-2xl transition-colors ${
+                      speech.listening === category ? "animate-pulse-soft bg-brand text-white" : "bg-paper text-ink/55 hover:text-brand"
+                    }`}
+                    aria-label={speech.listening === category ? t("play.voiceStop") : t("play.voice", { category: name })}
+                    title={speech.listening === category ? t("play.voiceStop") : t("play.voice", { category: name })}
+                    aria-pressed={speech.listening === category}
+                    onClick={(e) => {
+                      e.preventDefault(); // inside the <label>: don't also focus the input
+                      setSpeechNote(null);
+                      if (speech.listening === category) speech.stop();
+                      else speech.start(category);
+                    }}
+                  >
+                    <Icon name="mic" size={19} />
+                  </button>
+                )}
               </label>
             );
           })}
         </div>
+
+        {(speech.listening || speechNote) && (
+          <p role="status" className="animate-rise rounded-2xl bg-ink px-4 py-2.5 text-center text-sm font-bold text-cream">
+            {speech.listening ? `🎙️ ${t("play.voiceListening", { category: t(`categories.${speech.listening}`) })}` : t(`play.voiceError.${speechNote}`)}
+          </p>
+        )}
+
+        {emptyWarning && (
+          <div role="alertdialog" aria-live="assertive" className="animate-rise rounded-3xl bg-accent/25 p-4 outline-2 outline-accent">
+            <p className="headline text-lg text-ink">⚠️ {t("play.emptyTitle", { count: emptyWarning.length })}</p>
+            <p className="mt-1 text-sm font-bold text-ink/70">{emptyWarning.map((c) => t(`categories.${c}`)).join(t("final.listSeparator"))}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-ink flex-1"
+                onClick={() => {
+                  const first = round.categories.indexOf(emptyWarning[0]);
+                  setEmptyWarning(null);
+                  inputs.current[first]?.focus();
+                }}
+              >
+                {t("play.keepWriting")}
+              </button>
+              <button type="button" className="btn btn-ghost flex-1" onClick={submit}>
+                {t("play.submitAnyway")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* From sm up the whole bar pins to the bottom; it carries its own background so
             answers scrolling underneath never show through. */}
@@ -228,14 +334,30 @@ export function RoundPlay() {
 
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             {isHost && phase === "answer" && (
-              <button type="button" className="btn btn-ghost" onClick={() => void call("endRound")}>
-                {t("play.endNow")}
+              <>
+                <ConfirmButton className="btn btn-ghost" onConfirm={() => void call("endGame")}>
+                  <Icon name="trophy" size={16} />
+                  {t("header.endGame")}
+                </ConfirmButton>
+                <ConfirmButton className="btn btn-ghost" onConfirm={() => void call("endRound")}>
+                  {t("play.endNow")}
+                </ConfirmButton>
+              </>
+            )}
+            {submitted && phase === "answer" ? (
+              <button type="button" className="btn btn-mint flex-1 px-6 text-lg sm:flex-none" onClick={unsubmit}>
+                <Icon name="checkCircle" size={20} />
+                <span className="flex flex-col items-start leading-tight">
+                  {t("play.submitted")}
+                  <span className="text-xs font-bold opacity-70">{t("play.tapToEdit")}</span>
+                </span>
+              </button>
+            ) : (
+              <button type="submit" className="btn btn-brand flex-1 px-8 text-lg sm:flex-none" disabled={locked}>
+                <Icon name="checkCircle" size={20} />
+                {submitted ? t("play.submitted") : t("play.done")}
               </button>
             )}
-            <button type="submit" className="btn btn-brand flex-1 px-8 text-lg sm:flex-none" disabled={locked}>
-              <Icon name="checkCircle" size={20} />
-              {submitted ? t("play.submitted") : t("play.done")}
-            </button>
           </div>
         </div>
       </form>
