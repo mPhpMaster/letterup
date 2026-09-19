@@ -135,3 +135,18 @@ export function useServerNow(offset: number, intervalMs = 250): number {
   }, [offset, intervalMs]);
   return now;
 }
+
+/**
+ * Fetch state just after a server deadline passes. The server only moves a round on
+ * when someone asks (heartbeat or action), so without this the room would wait for
+ * the next poll -- up to five seconds late, and at slightly different moments for
+ * everyone.
+ */
+export function useRefreshAt(at: number | null, offset: number, refresh: () => Promise<void>): void {
+  useEffect(() => {
+    if (at === null) return;
+    const wait = Math.max(0, at - (Date.now() + offset)) + 400;
+    const id = setTimeout(() => void refresh(), wait);
+    return () => clearTimeout(id);
+  }, [at, offset, refresh]);
+}

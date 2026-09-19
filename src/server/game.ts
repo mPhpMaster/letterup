@@ -205,22 +205,117 @@ async function maybeMigrateHost(core: Core, now: number): Promise<boolean> {
  * else to vote -- are skipped on the spot. Left to the heartbeat, the room sat on
  * "waiting for everyone to vote" for up to a poll interval with nothing to wait for.
  */
-async function openVoting(round: RoundRow): Promise<void> {
+async function openVoting(round: RoundRow, playerCount: number): Promise<void> {
   const db = admin();
   const { error } = await db.rpc("end_round", { p_round_id: round.id });
   if (error) throw new Error(`end_round: ${error.message}`);
   const advanced = await db.rpc("advance_vote_category", { p_round_id: round.id });
   if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
-  // end_round already bumped the game version, and other clients may fetch before
-  // the skip lands -- bump again so they catch it. Only when the category actually
-  // moved, so an ordinary round does not wake everyone twice.
-  if (typeof advanced.data === "number" && advanced.data > 0) await touch(round.game_id);
+  const index = typeof advanced.data === "number" ? advanced.data : 0;
+  // end_round stamped one deadline for the whole round; each category gets its own.
+  await stampVoteDeadline(round.id, index, round.categories.length, playerCount);
+  // end_round already bumped the game version, and other clients may have fetched
+  // before the deadline (and any skip) landed -- bump again so they catch it.
+  await touch(round.game_id);
 }
 
-async function endRoundIfNeeded(round: RoundRow | null, now: number): Promise<boolean> {
+async function endRoundIfNeeded(round: RoundRow | null, now: number, playerCount: number): Promise<boolean> {
   if (!round || round.status !== "playing" || now <= Date.parse(round.ends_at) + ANSWER_GRACE_MS) return false;
-  await openVoting(round);
+  await openVoting(round, playerCount);
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Timers that keep a game moving without the host
+//
+// rounds.vote_ends_at is the round's *current* deadline:
+//   * while a category is being reviewed -- when that category closes
+//   * once every category is reviewed     -- when the scores lock in
+//   * after scoring (game in "results")   -- when the next round starts
+// ---------------------------------------------------------------------------
+const VOTE_SECONDS_PER_PLAYER = 5;
+/** After the last category: a moment to look the board over before it scores. */
+const REVIEWED_GRACE_MS = 5_000;
+/** How long the between-rounds scoreboard stays up. */
+const RESULTS_MS = 5_000;
+
+function categoryVoteMs(playerCount: number): number {
+  return VOTE_SECONDS_PER_PLAYER * 1000 * Math.max(1, playerCount);
+}
+
+async function stampVoteDeadline(roundId: string, index: number, total: number, playerCount: number): Promise<void> {
+  const ms = index < total ? categoryVoteMs(playerCount) : REVIEWED_GRACE_MS;
+  const { error } = await admin()
+    .from("rounds")
+    .update({ vote_ends_at: new Date(Date.now() + ms).toISOString() })
+    .eq("id", roundId);
+  if (error) throw new Error(`vote deadline: ${error.message}`);
+}
+
+/**
+ * The current category's clock ran out: close it even though not everyone voted.
+ *
+ * The step and the next category's clock are written together, and only if the
+ * round still holds exactly the index *and* deadline this caller saw. Every client
+ * polls, so several notice the same expiry; written separately, one of them could
+ * read the new index beside the old, already-expired deadline and close that
+ * category too.
+ */
+async function closeCategoryOnTimeout(round: RoundRow, playerCount: number): Promise<boolean> {
+  const db = admin();
+  const next = round.vote_category_index + 1;
+  const total = round.categories.length;
+  const ms = next < total ? categoryVoteMs(playerCount) : REVIEWED_GRACE_MS;
+  const moved = await db
+    .from("rounds")
+    .update({ vote_category_index: next, vote_ends_at: new Date(Date.now() + ms).toISOString() })
+    .eq("id", round.id)
+    .eq("status", "voting")
+    .eq("vote_category_index", round.vote_category_index)
+    .eq("vote_ends_at", round.vote_ends_at!)
+    .select("id");
+  if (moved.error) throw new Error(`close category: ${moved.error.message}`);
+  if (moved.data.length === 0) return false;
+  // The next category might have nothing to vote on either; only then restamp.
+  const advanced = await db.rpc("advance_vote_category", { p_round_id: round.id });
+  if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
+  if (typeof advanced.data === "number" && advanced.data > next) await stampVoteDeadline(round.id, advanced.data, total, playerCount);
+  return true;
+}
+
+/**
+ * Leave the between-rounds scoreboard: start the next round, or finish the game
+ * after the last one. Called by the host's button and by the heartbeat once the
+ * scoreboard's timer runs out; both paths are guarded on the "results" status, so
+ * whichever lands second does nothing.
+ */
+async function advanceFromResults(core: Core): Promise<void> {
+  const db = admin();
+  if (core.game.current_round >= core.settings.total_rounds) {
+    const finished = await db.from("games").update({ status: "finished" }).eq("id", core.game.id).eq("status", "results").select("id");
+    if (finished.error) throw new Error(`finish: ${finished.error.message}`);
+    if (finished.data.length === 0) return;
+    // Lifetime stats for the profile cards; the RPC only counts each game once.
+    const stats = await db.rpc("record_game_stats", { p_game_id: core.game.id });
+    if (stats.error) console.error("[record_game_stats]", stats.error.message);
+    // The history behind the full profile card (trend, streaks, categories, words,
+    // speed). Separate so a missing migration can't block finishing the game.
+    if (stats.data === true) {
+      const details = await db.rpc("record_game_details", { p_game_id: core.game.id });
+      if (details.error) console.error("[record_game_details]", details.error.message);
+    }
+    await touch(core.game.id);
+    return;
+  }
+
+  const letter = pickLetter(core.settings.letter_locale, core.game.used_letters, core.settings.exclude_hard_letters);
+  const { error } = await db.rpc("start_round", {
+    p_game_id: core.game.id,
+    p_expected_status: "results",
+    p_letter: letter,
+    p_reveal_seconds: REVEAL_SECONDS,
+  });
+  if (error) throw new Error(`start_round: ${error.message}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -516,7 +611,7 @@ export const actions: Record<string, Action> = {
     const core = await loadCore(gameId);
     const now = Date.now();
     const hostChanged = await maybeMigrateHost(core, now);
-    const ended = core.game.status === "playing" && (await endRoundIfNeeded(await currentRound(core.game), now));
+    const ended = core.game.status === "playing" && (await endRoundIfNeeded(await currentRound(core.game), now, core.players.length));
     // Someone dropping out can be exactly what the current category was waiting on,
     // and nobody else is voting to trigger it -- so the heartbeat checks too. Only
     // bump the game version when the category actually moved, or every poll would
@@ -525,17 +620,31 @@ export const actions: Record<string, Action> = {
     if (core.game.status === "voting") {
       const voting = await currentRound(core.game);
       if (voting) {
-        if (voting.vote_ends_at && now > Date.parse(voting.vote_ends_at)) {
-          // The clock ran out: score it without waiting on the host.
+        const expired = !!voting.vote_ends_at && now > Date.parse(voting.vote_ends_at);
+        if (expired && voting.vote_category_index >= voting.categories.length) {
+          // Every category reviewed and the look-over time is up: score it without the host.
           await settleRound(core, voting);
-          movedOn = true;
+        } else if (expired) {
+          movedOn = await closeCategoryOnTimeout(voting, core.players.length);
         } else {
           const moved = await db.rpc("advance_vote_category", { p_round_id: voting.id });
-          movedOn = !moved.error && typeof moved.data === "number" && moved.data !== voting.vote_category_index;
+          if (!moved.error && typeof moved.data === "number" && moved.data !== voting.vote_category_index) {
+            await stampVoteDeadline(voting.id, moved.data, voting.categories.length, core.players.length);
+            movedOn = true;
+          }
         }
       }
     }
-    if ((hostChanged || movedOn) && !ended) await touch(gameId);
+    // The scoreboard between rounds runs on its own clock too, so play never waits on the host.
+    let advanced = false;
+    if (core.game.status === "results") {
+      const scored = await currentRound(core.game);
+      if (scored?.vote_ends_at && now > Date.parse(scored.vote_ends_at)) {
+        await advanceFromResults(core);
+        advanced = true;
+      }
+    }
+    if ((hostChanged || movedOn) && !ended && !advanced) await touch(gameId);
     return buildState(user, gameId);
   },
 
@@ -603,32 +712,7 @@ export const actions: Record<string, Action> = {
     const m = await requireMember(user, body);
     requireHost(m);
     requireStatus(m, "results");
-    const db = admin();
-
-    if (m.game.current_round >= m.settings.total_rounds) {
-      const { error } = await db.from("games").update({ status: "finished" }).eq("id", m.game.id).eq("status", "results");
-      if (error) throw new Error(`finish: ${error.message}`);
-      // Lifetime stats for the profile cards; the RPC only counts each game once.
-      const stats = await db.rpc("record_game_stats", { p_game_id: m.game.id });
-      if (stats.error) console.error("[record_game_stats]", stats.error.message);
-      // The history behind the full profile card (trend, streaks, categories, words,
-      // speed). Separate so a missing migration can't block finishing the game.
-      if (stats.data === true) {
-        const details = await db.rpc("record_game_details", { p_game_id: m.game.id });
-        if (details.error) console.error("[record_game_details]", details.error.message);
-      }
-      await touch(m.game.id);
-      return buildState(user, m.game.id);
-    }
-
-    const letter = pickLetter(m.settings.letter_locale, m.game.used_letters, m.settings.exclude_hard_letters);
-    const { error } = await db.rpc("start_round", {
-      p_game_id: m.game.id,
-      p_expected_status: "results",
-      p_letter: letter,
-      p_reveal_seconds: REVEAL_SECONDS,
-    });
-    if (error) throw new Error(`start_round: ${error.message}`);
+    await advanceFromResults(m);
     return buildState(user, m.game.id);
   },
 
@@ -679,7 +763,7 @@ export const actions: Record<string, Action> = {
 
       const everyoneDone = m.players.filter((p) => p.id === m.me.id || isOnline(p, now)).every((p) => submittedIds.has(p.id));
       if (everyoneDone) {
-        await openVoting(round);
+        await openVoting(round, m.players.length);
       } else {
         await touch(m.game.id);
       }
@@ -692,7 +776,7 @@ export const actions: Record<string, Action> = {
     requireHost(m);
     requireStatus(m, "playing");
     const round = await currentRound(m.game);
-    if (round) await openVoting(round);
+    if (round) await openVoting(round, m.players.length);
     return buildState(user, m.game.id);
   },
 
@@ -711,9 +795,14 @@ export const actions: Record<string, Action> = {
             .from("votes")
             .upsert({ answer_id: answer.id, voter_player_id: m.me.id, approve }, { onConflict: "answer_id,voter_player_id" });
     if (res.error) throw new Error(`vote: ${res.error.message}`);
+    const before = await currentRound(m.game);
     // This may have been the last vote the current category was waiting on.
     const advanced = await db.rpc("advance_vote_category", { p_round_id: answer.round_id });
     if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
+    // Finished early: the next category gets its own full clock.
+    if (before && typeof advanced.data === "number" && advanced.data >= 0 && advanced.data !== before.vote_category_index) {
+      await stampVoteDeadline(before.id, advanced.data, before.categories.length, m.players.length);
+    }
     await touch(m.game.id);
     return buildState(user, m.game.id);
   },
@@ -830,11 +919,18 @@ async function settleRound(core: Core, round: RoundRow): Promise<void> {
     // With only two players nobody can outvote the author, so the single opponent's 👎 decides.
     core.players.length,
   );
-  const { error } = await db.rpc("apply_round_scores", {
+  const { data: scored, error } = await db.rpc("apply_round_scores", {
     p_round_id: round.id,
     p_results: scores.map((s) => ({ id: s.id, is_valid: s.isValid, points: s.points })),
   });
   if (error) throw new Error(`apply_round_scores: ${error.message}`);
+  // Someone else scored it first (several clients notice an expiry at once): their
+  // countdown stands.
+  if (scored !== true) return;
+  // Start the scoreboard's countdown to the next round.
+  const stamp = await db.from("rounds").update({ vote_ends_at: new Date(Date.now() + RESULTS_MS).toISOString() }).eq("id", round.id);
+  if (stamp.error) throw new Error(`results deadline: ${stamp.error.message}`);
+  await touch(round.game_id);
 }
 
 async function votableAnswer(m: Member, body: Body): Promise<AnswerRow> {

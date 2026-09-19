@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRefreshAt, useServerNow } from "@/hooks/useGame";
 import { useI18n } from "@/i18n/I18nProvider";
 import { rankByScore } from "@/lib/ranking";
 import { useSound } from "@/lib/sound";
@@ -10,7 +11,7 @@ import { Icon } from "./Icon";
 import { Avatar, LetterTile, PlayerName } from "./ui";
 
 export function RoundResults() {
-  const { state, isHost, hostName, call, openProfile } = useGameContext();
+  const { state, isHost, offset, call, refresh, openProfile } = useGameContext();
   const { t } = useI18n();
   const { play } = useSound();
   const round = state.round!;
@@ -80,24 +81,66 @@ export function RoundResults() {
       </section>
 
       <div className="z-10 sm:sticky sm:bottom-3">
-        {isHost ? (
-          <button
-            type="button"
-            className="btn btn-brand w-full py-4 text-xl"
-            onClick={() => {
-              play("click");
-              void call("next");
-            }}
-          >
-            {isLast ? t("results.final") : t("results.next")}
-            <Icon name="arrowRight" size={20} className="rtl:-scale-x-100" />
-          </button>
-        ) : (
-          <div className="waiting">
-            <p className="animate-pulse-soft">{t("results.waitingHost", { name: hostName })}</p>
-          </div>
-        )}
+        <AutoAdvance
+          at={round.voteEndsAt}
+          offset={offset}
+          refresh={refresh}
+          label={(seconds) => (isLast ? t("results.autoFinal", { seconds }) : t("results.autoNext", { seconds }))}
+          // The host can still skip the wait.
+          skip={
+            isHost
+              ? {
+                  label: isLast ? t("results.final") : t("results.next"),
+                  onSkip: () => {
+                    play("click");
+                    void call("next");
+                  },
+                }
+              : null
+          }
+        />
       </div>
+    </div>
+  );
+}
+
+/** "Next round in 4s": a countdown bar that moves the room on by itself. */
+function AutoAdvance({
+  at,
+  offset,
+  refresh,
+  label,
+  skip,
+}: {
+  at: number | null;
+  offset: number;
+  refresh: () => Promise<void>;
+  label: (seconds: number) => string;
+  skip: { label: string; onSkip: () => void } | null;
+}) {
+  const now = useServerNow(offset);
+  useRefreshAt(at, offset, refresh);
+  const left = at === null ? null : Math.max(0, at - now);
+  const seconds = left === null ? 0 : Math.ceil(left / 1000);
+  const fraction = left === null ? 0 : Math.min(1, left / 5000);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="waiting relative overflow-hidden">
+        {/* Drains from full to empty as the countdown runs. */}
+        <span
+          aria-hidden
+          className="absolute inset-y-0 start-0 bg-accent/30 transition-[width] duration-1000 ease-linear"
+          style={{ width: `${fraction * 100}%` }}
+        />
+        <p className="relative tabular-nums">{left === null ? "…" : label(seconds)}</p>
+      </div>
+      {skip && (
+        <button type="button" className="btn btn-brand w-full py-3.5 text-lg" onClick={skip.onSkip}>
+          {skip.label}
+          <Icon name="arrowRight" size={20} className="rtl:-scale-x-100" />
+        </button>
+      )}
     </div>
   );
 }

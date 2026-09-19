@@ -142,7 +142,7 @@
     "votes": "Votes",
     "hostControls": "Host ruling",
     "progress": "Category {current} of {total}",
-    "autoConfirm": "Scores are confirmed automatically when the timer runs out.",
+    "autoConfirm": "Each category moves on when its timer runs out — no need to wait for the host.",
     "waitingOthers": "Waiting for everyone to vote on this category…",
     "allReviewed": "Every category reviewed.",
     "confirm": "Confirm Scores",
@@ -159,7 +159,9 @@
     "showAnswers": "Show all answers",
     "next": "Next Round",
     "final": "See Final Results",
-    "waitingHost": "Waiting for {name} to continue…"
+    "waitingHost": "Waiting for {name} to continue…",
+    "autoNext": "Next round in {seconds}s…",
+    "autoFinal": "Final results in {seconds}s…"
   },
   "final": {
     "title": "Final Leaderboard",

@@ -1,17 +1,19 @@
 "use client";
 
 import { useI18n } from "@/i18n/I18nProvider";
-import { useServerNow } from "@/hooks/useGame";
+import { useRefreshAt, useServerNow } from "@/hooks/useGame";
 import { AnswersBoard } from "./AnswersBoard";
 import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
 import { LetterTile, TimerRing } from "./ui";
 
-/** Matches the window the server stamps on the round: per player, per category. */
-const SECONDS_PER_PLAYER_PER_CATEGORY = 5;
+/** Matches the server: each category gets 5 seconds per player... */
+const SECONDS_PER_PLAYER = 5;
+/** ...and once all are reviewed, the scores lock in after this. */
+const REVIEWED_GRACE_MS = 5_000;
 
 export function Voting() {
-  const { state, isHost, hostName, offset, call } = useGameContext();
+  const { state, isHost, hostName, offset, call, refresh } = useGameContext();
   const { t } = useI18n();
   const round = state.round!;
   // Exactly two: a solo round has nobody to outvote, so the two-player rule would mislead.
@@ -26,6 +28,8 @@ export function Voting() {
   const total = round.categories.length;
   const reviewing = round.voteCategoryIndex < total;
   const current = Math.min(round.voteCategoryIndex + 1, total);
+  // The category closes (or the scores lock) on the server's clock; ask right then.
+  useRefreshAt(round.voteEndsAt, offset, refresh);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
@@ -43,7 +47,7 @@ export function Voting() {
             {round.voteEndsAt !== null && (
               <TimerRing
                 remainingMs={round.voteEndsAt - now}
-                totalMs={Math.max(1, state.players.length * total * SECONDS_PER_PLAYER_PER_CATEGORY * 1000)}
+                totalMs={reviewing ? Math.max(1, state.players.length) * SECONDS_PER_PLAYER * 1000 : REVIEWED_GRACE_MS}
                 size={56}
               />
             )}
