@@ -148,7 +148,8 @@ function ProfileBody({
               {d && <span>· {t("profile.memberSince", { year: new Date(d.memberSince).getFullYear() })}</span>}
             </p>
             <p className="mt-0.5 text-xs font-bold text-ink/45">
-              {t("profile.followersLine", { followers: n(profile.followers), following: n(profile.following) })}
+              {t("profile.followersCount", { count: profile.followers, num: n(profile.followers) })} ·{" "}
+              {t("profile.followingLine", { num: n(profile.following) })}
             </p>
           </div>
           <button

@@ -566,6 +566,10 @@ export const actions: Record<string, Action> = {
         if (!(await verifyPassword(supplied, game.password_hash))) throw new HttpError(401, "Wrong password");
       }
     }
+    // A kick sticks; say so instead of the generic "not in this game" it used to end on.
+    const kicked = await db.from("players").select("id").eq("game_id", game.id).eq("user_id", user.userId).not("kicked_at", "is", null).maybeSingle();
+    if (kicked.error) throw new Error(`join: ${kicked.error.message}`);
+    if (kicked.data) throw new HttpError(403, "The host removed you from this room");
     await addPlayer(game.id, user);
     await claimHostIfFree(game, user);
     await touch(game.id);

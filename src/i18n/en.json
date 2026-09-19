@@ -219,7 +219,6 @@
     "followPlayer": "Follow player",
     "onlineNow": "Online now",
     "memberSince": "Member since {year}",
-    "followersLine": "{followers} followers · {following} following",
     "tier": {
       "legendary": "Legendary",
       "elite": "Elite",
@@ -271,7 +270,10 @@
     "duelWins": "1v1 wins",
     "groupWins": "Group wins",
     "challenge": "Challenge",
-    "challengeSent": "Challenge sent — they're invited to your room."
+    "challengeSent": "Challenge sent — they're invited to your room.",
+    "followersCount_one": "{num} follower",
+    "followersCount_other": "{num} followers",
+    "followingLine": "{num} following"
   },
   "invites": {
     "title": "Invites",
@@ -348,6 +350,7 @@
     "stay": "Stay here"
   },
   "errors": {
-    "generic": "Something went wrong."
+    "generic": "Something went wrong.",
+    "roomGone": "You're no longer in that room."
   }
 }

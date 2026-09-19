@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { postJson } from "@/lib/api";
+import { ApiError, postJson } from "@/lib/api";
 import { browserSupabase } from "@/lib/supabase-browser";
 import type { GameState } from "@/lib/types";
 
@@ -30,6 +30,9 @@ export function useGame(token: string | null, initial: GameState) {
   const [state, setState] = useState(initial);
   const [offset, setOffset] = useState(() => initial.serverNow - Date.now());
   const [error, setError] = useState<string | null>(null);
+  // The room is gone for us (kicked, or deleted by cleanup). Polling would only
+  // repeat the same 403/404 every five seconds over a frozen screen.
+  const [gone, setGone] = useState(false);
 
   const seq = useRef(0);
   const applied = useRef(0);
@@ -62,6 +65,7 @@ export function useGame(token: string | null, initial: GameState) {
         if (!opts.silent) setError(null);
         return next;
       } catch (err) {
+        if (action === "state" && err instanceof ApiError && (err.status === 403 || err.status === 404)) setGone(true);
         if (!opts.silent) setError(err instanceof Error ? err.message : String(err));
         return null;
       }
@@ -113,6 +117,7 @@ export function useGame(token: string | null, initial: GameState) {
 
   // Heartbeat / fallback polling, plus an immediate refresh when the tab becomes visible again.
   useEffect(() => {
+    if (gone) return;
     const interval = setInterval(() => void refresh(), POLL_MS);
     const onVisible = () => document.visibilityState === "visible" && void refresh();
     document.addEventListener("visibilitychange", onVisible);
@@ -120,9 +125,9 @@ export function useGame(token: string | null, initial: GameState) {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [refresh]);
+  }, [refresh, gone]);
 
-  return { state, offset, error, clearError: () => setError(null), call, refresh };
+  return { state, offset, error, gone, clearError: () => setError(null), call, refresh };
 }
 
 /** Server-synchronised clock that re-renders every `intervalMs`. */

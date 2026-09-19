@@ -7,7 +7,7 @@ import { ApiError, getJson, postJson } from "@/lib/api";
 import { bootDiscord, DiscordHandshakeTimeout, isEmbeddedInDiscord, type BootStep, type DiscordBoot } from "@/lib/discord";
 import type { GameState, ProfileView, RoomSummary, SessionUser } from "@/lib/types";
 import { useGame } from "@/hooks/useGame";
-import { useSocial } from "@/hooks/useSocial";
+import { SOCIAL_CHANGED, useSocial } from "@/hooks/useSocial";
 import { AdminPanel } from "./AdminPanel";
 import { GameContext, type GameContextValue } from "./GameContext";
 import { FriendsDrawer } from "./FriendsDrawer";
@@ -85,9 +85,7 @@ export default function App() {
 
   const enterGame = useCallback((state: GameState, token: string | null, sdk?: DiscordSDK) => {
     if (state.game.roomCode) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("room", state.game.roomCode);
-      window.history.replaceState(null, "", url);
+      setRoomInUrl(state.game.roomCode);
     }
     setPhase({ kind: "game", token, state, sdk });
   }, []);
@@ -126,6 +124,8 @@ export default function App() {
         return;
       }
 
+      // No Discord here: "Connecting to Discord…" sat on screen for the whole sign-in check.
+      setPhase({ kind: "booting", step: "authorizing" });
       const authError = new URLSearchParams(window.location.search).get("error");
       const me = await getJson<{ user: SessionUser | null; isAdmin: boolean }>("/api/auth/me").catch(() => ({
         user: null,
@@ -139,6 +139,7 @@ export default function App() {
       setSignedIn(me.user);
       const code = roomFromUrl();
       if (code) {
+        setPhase({ kind: "booting", step: "joining" });
         try {
           enterGame(await postJson<GameState>("/api/game/joinCode", { code }), null);
           return;
@@ -214,7 +215,10 @@ export default function App() {
 
   /** The session cookie is HttpOnly, so signing out has to go through the server. */
   /** Leaving a lobby lands on the room list; only reload if we never learned who is signed in. */
-  const exitToRooms = () => {
+  const exitToRooms = (message?: string) => {
+    if (message) flash(message);
+    // Otherwise a refresh on the home screen joins the room you just left.
+    setRoomInUrl(null);
     if (signedIn) setPhase({ kind: "rooms", user: signedIn });
     else window.location.href = "/";
   };
@@ -335,8 +339,13 @@ export default function App() {
           isAdmin={isAdmin}
           onClose={() => setProfileId(null)}
           onToggleFollow={(userId, follow) => {
-            void postJson("/api/social/follow", { userId, follow }, token ?? undefined).catch(() => {});
-            setProfile((p) => (p ? { ...p, isFollowing: follow } : p));
+            void postJson("/api/social/follow", { userId, follow }, token ?? undefined)
+              .catch(() => {})
+              // The friends drawer polls every 20s; don't leave it saying "not following anyone".
+              .finally(() => window.dispatchEvent(new Event(SOCIAL_CHANGED)));
+            setProfile((p) =>
+              p && p.isFollowing !== follow ? { ...p, isFollowing: follow, followers: Math.max(0, p.followers + (follow ? 1 : -1)) } : p,
+            );
           }}
           onJoinRoom={(code) => {
             window.location.href = `/?room=${code}`;
@@ -516,10 +525,10 @@ function GameScreen({
   onOpenProfile: (userId: string) => void;
   onOpenLeaderboard: () => void;
   onOpenAdmin: () => void;
-  onExit: () => void;
+  onExit: (message?: string) => void;
 }) {
   const { t } = useI18n();
-  const { state, offset, error, clearError, call, refresh } = useGame(token, initial);
+  const { state, offset, error, gone, clearError, call, refresh } = useGame(token, initial);
   const participantIds = useDiscordParticipants(sdk, refresh);
   const social = useSocial(token, state.game.id);
 
@@ -554,6 +563,11 @@ function GameScreen({
   // which rejoins this channel's game -- so leaving looked like the game had shut
   // and reopened. Hand control back to the shell and let it show the room list.
   const goHome = () => onExit();
+
+  // Removed from the room (kicked, or the room was cleaned up): say so and go home.
+  useEffect(() => {
+    if (gone) onExit(t("errors.roomGone"));
+  }, [gone, onExit, t]);
 
   const leaveRoom = () => {
     void postJson("/api/game/leave", { gameId: state.game.id }, token ?? undefined)
@@ -693,4 +707,16 @@ function GameScreen({
       </div>
     </GameContext.Provider>
   );
+}
+
+/**
+ * Keep the address bar (and tab title) on the room you're in. The server-rendered
+ * title only knows the room the page was first opened with.
+ */
+function setRoomInUrl(code: string | null) {
+  const url = new URL(window.location.href);
+  if (code) url.searchParams.set("room", code);
+  else url.searchParams.delete("room");
+  window.history.replaceState(null, "", url);
+  document.title = code ? `🎈 Room ${code} · LetterUp` : "LetterUp — Human, Animal, Plant, Object";
 }

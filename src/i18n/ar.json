@@ -232,7 +232,6 @@
     "followPlayer": "متابعة اللاعب",
     "onlineNow": "متصل الآن",
     "memberSince": "عضو منذ {year}",
-    "followersLine": "{followers} متابِع · يتابع {following}",
     "tier": {
       "legendary": "أسطوري",
       "elite": "نخبة",
@@ -292,7 +291,14 @@
     "duelWins": "فوز 1 ضد 1",
     "groupWins": "فوز جماعي",
     "challenge": "تحدي",
-    "challengeSent": "أُرسل التحدي — تمت دعوته إلى غرفتك."
+    "challengeSent": "أُرسل التحدي — تمت دعوته إلى غرفتك.",
+    "followersCount_zero": "{num} متابِع",
+    "followersCount_one": "متابِع واحد",
+    "followersCount_two": "متابِعان",
+    "followersCount_few": "{num} متابِعين",
+    "followersCount_many": "{num} متابِعًا",
+    "followersCount_other": "{num} متابِع",
+    "followingLine": "يتابع {num}"
   },
   "invites": {
     "title": "الدعوات",
@@ -373,6 +379,7 @@
     "stay": "ابقَ هنا"
   },
   "errors": {
-    "generic": "حدث خطأ ما."
+    "generic": "حدث خطأ ما.",
+    "roomGone": "لم تعد في هذه الغرفة."
   }
 }

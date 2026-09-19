@@ -5,6 +5,8 @@ import { postJson } from "@/lib/api";
 import type { ProfileView, SocialState } from "@/lib/types";
 
 const POLL_MS = 20_000;
+/** Fired on `window` when something outside this hook changed the follow graph. */
+export const SOCIAL_CHANGED = "letterup:social-changed";
 
 const EMPTY: SocialState = {
   me: {
@@ -65,7 +67,12 @@ export function useSocial(token: string | null, gameId: string | null) {
   useEffect(() => {
     void refresh();
     const id = setInterval(() => void refresh(), POLL_MS);
-    return () => clearInterval(id);
+    const onChanged = () => void refresh();
+    window.addEventListener(SOCIAL_CHANGED, onChanged);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener(SOCIAL_CHANGED, onChanged);
+    };
   }, [refresh]);
 
   const withBusy = useCallback(
