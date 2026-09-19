@@ -36,6 +36,8 @@ export function useGame(token: string | null, initial: GameState) {
 
   const seq = useRef(0);
   const applied = useRef(0);
+  // Id of the newest call that painted an optimistic state.
+  const optimisticFrom = useRef(0);
   const bestSample = useRef({ rtt: Number.POSITIVE_INFINITY, at: 0 });
   const version = useRef(initial.game.version);
 
@@ -46,7 +48,10 @@ export function useGame(token: string | null, initial: GameState) {
       // Show the expected result before the request goes out. Every action costs a
       // full round trip to the API and several queries behind it, which through the
       // Discord proxy is long enough for a tap to feel ignored.
-      if (opts.optimistic) setState((current) => opts.optimistic!(current));
+      if (opts.optimistic) {
+        optimisticFrom.current = id;
+        setState((current) => opts.optimistic!(current));
+      }
       try {
         const next = await postJson<GameState>(`/api/game/${action}`, { ...body, gameId }, token ?? undefined);
         const receivedAt = Date.now();
@@ -56,8 +61,10 @@ export function useGame(token: string | null, initial: GameState) {
           bestSample.current = { rtt, at: receivedAt };
           setOffset(next.serverNow - (sentAt + rtt / 2));
         }
-        // Ignore responses to requests that were overtaken by newer ones.
-        if (id > applied.current) {
+        // Ignore responses to requests that were overtaken by newer ones -- including
+        // one sent before a later optimistic change, which would briefly undo it
+        // (quick settings taps flickered back to the old value).
+        if (id > applied.current && id >= optimisticFrom.current) {
           applied.current = id;
           version.current = next.game.version;
           setState(next);
