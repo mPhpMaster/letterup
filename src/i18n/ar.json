@@ -58,7 +58,8 @@
     "profile": "الملف الشخصي",
     "roundLong": "الجولة {current} من {total}",
     "soundOn": "الصوت مفعّل",
-    "soundOff": "الصوت مكتوم"
+    "soundOff": "الصوت مكتوم",
+    "gameOver": "انتهت اللعبة"
   },
   "lobby": {
     "title": "الردهة",
@@ -178,7 +179,19 @@
     "playAgain": "العب مجددًا",
     "waitingHost": "بانتظار {name} لبدء لعبة جديدة…",
     "listSeparator": "، ",
-    "standings": "الترتيب النهائي"
+    "standings": "الترتيب النهائي",
+    "noScore": "لم يسجّل أحد نقاطاً هذه المرة — جرّبوا مجدداً!",
+    "kicker_one": "انتهت اللعبة · جولة واحدة",
+    "kicker_two": "انتهت اللعبة · جولتان",
+    "kicker_few": "انتهت اللعبة · {count} جولات",
+    "kicker_other": "انتهت اللعبة · {count} جولة",
+    "points_zero": "0 نقطة",
+    "points_one": "نقطة واحدة",
+    "points_two": "نقطتان",
+    "points_few": "{count} نقاط",
+    "points_other": "{count} نقطة",
+    "lastRoundAnswers": "إجابات الجولة الأخيرة ({letter})",
+    "leave": "مغادرة الغرفة"
   },
   "friends": {
     "title": "الأصدقاء",

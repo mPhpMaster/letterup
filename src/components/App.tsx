@@ -595,7 +595,13 @@ function GameScreen({
       <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col gap-4 p-3 pb-8 sm:gap-5 sm:p-5">
         {/* Tapping the logo leaves the game screen — always with a confirmation. */}
         <AppHeader
-          subtitle={inGame ? t("header.round", { current: state.game.currentRound, total: state.settings.totalRounds }) : t("app.title")}
+          subtitle={
+            inGame
+              ? t("header.round", { current: state.game.currentRound, total: state.settings.totalRounds })
+              : status === "finished"
+                ? t("header.gameOver")
+                : t("app.title")
+          }
           badge={inGame ? t("header.roundLong", { current: state.game.currentRound, total: state.settings.totalRounds }) : undefined}
           onLogoClick={() => setGoHomeOpen(true)}
           logoLabel={t("nav.goHomeTitle")}

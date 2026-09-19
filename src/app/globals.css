@@ -75,11 +75,17 @@
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.08); }
   }
-  @keyframes confettiFall {
-    0% { transform: translateY(-15vh) rotate(0deg); opacity: 0; }
-    10% { opacity: 1; }
-    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
-  }
+}
+
+/*
+ * Outside @theme on purpose: Tailwind only keeps @theme keyframes that an
+ * --animate-* utility uses, and the confetti is driven by the .confetti class.
+ * Inside, it was dropped from the build and every piece sat frozen at the top.
+ */
+@keyframes confettiFall {
+  0% { transform: translateY(-15vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
 }
 
 html,

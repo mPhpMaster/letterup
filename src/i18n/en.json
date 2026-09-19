@@ -54,7 +54,8 @@
     "profile": "Profile",
     "roundLong": "Round {current} of {total}",
     "soundOn": "Sound on",
-    "soundOff": "Sound off"
+    "soundOff": "Sound off",
+    "gameOver": "Game over"
   },
   "lobby": {
     "title": "Lobby",
@@ -170,7 +171,14 @@
     "playAgain": "Play Again",
     "waitingHost": "Waiting for {name} to start a new game…",
     "listSeparator": ", ",
-    "standings": "Final standings"
+    "standings": "Final standings",
+    "noScore": "Nobody scored this game — try again!",
+    "kicker_one": "Game over · 1 round",
+    "kicker_other": "Game over · {count} rounds",
+    "points_one": "{count} pt",
+    "points_other": "{count} pts",
+    "lastRoundAnswers": "Last round's answers ({letter})",
+    "leave": "Leave room"
   },
   "friends": {
     "title": "Friends",
