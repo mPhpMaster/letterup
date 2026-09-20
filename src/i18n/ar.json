@@ -101,7 +101,8 @@
     "leave": "مغادرة الردهة",
     "leaveGame": "مغادرة اللعبة",
     "roomCode": "رمز الغرفة",
-    "playersHeading": "اللاعبون"
+    "playersHeading": "اللاعبون",
+    "startAnyway": "{ready}/{total} جاهزون — اضغط مرتين للبدء على أي حال"
   },
   "categories": {
     "human": "إنسان",

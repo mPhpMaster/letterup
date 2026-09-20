@@ -2,12 +2,12 @@
   "name": "letterup",
   "version": "1.0.0",
   "private": true,
-  "description": "Human, Animal, Plant, Object — a multiplayer word game Discord Activity",
+  "description": "Human, Animal, Plant, Object \u2014 a multiplayer word game Discord Activity",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit",
+    "lint": "oxlint && tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "engines": {
@@ -26,6 +26,7 @@
     "@types/node": "^26.6.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "oxlint": "^1.83.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2"

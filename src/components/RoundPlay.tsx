@@ -89,22 +89,6 @@ export function RoundPlay() {
     play("tick");
   }, [phase, secondsLeft, play]);
 
-  // Voice answers, in the round's language. Only offered where the browser can do it.
-  const [speechNote, setSpeechNote] = useState<SpeechError | null>(null);
-  const speech = useSpeechInput(
-    round.letterLocale,
-    (category, text) => setDraft(category, text),
-    (error) => setSpeechNote(error),
-  );
-  useEffect(() => {
-    if (locked) speech.stop();
-  }, [locked, speech.stop]);
-  useEffect(() => {
-    if (!speechNote) return;
-    const id = setTimeout(() => setSpeechNote(null), 3500);
-    return () => clearTimeout(id);
-  }, [speechNote]);
-
   const submit = () => {
     setEmptyWarning(null);
     play("submit");
@@ -130,6 +114,19 @@ export function RoundPlay() {
     draftsRef.current = next;
     setDrafts(next);
   };
+
+  // Voice answers, in the round's language. Only offered where the browser can do it.
+  const [speechNote, setSpeechNote] = useState<SpeechError | null>(null);
+  const speech = useSpeechInput(round.letterLocale, setDraft, setSpeechNote);
+  const stopSpeech = speech.stop;
+  useEffect(() => {
+    if (locked) stopSpeech();
+  }, [locked, stopSpeech]);
+  useEffect(() => {
+    if (!speechNote) return;
+    const id = setTimeout(() => setSpeechNote(null), 3500);
+    return () => clearTimeout(id);
+  }, [speechNote]);
 
   const activePlayers = state.players.filter((p) => p.online || round.submittedPlayerIds.includes(p.id));
   const doneCount = round.submittedPlayerIds.length;

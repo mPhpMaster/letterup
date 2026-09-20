@@ -93,7 +93,8 @@
     "leave": "Leave lobby",
     "leaveGame": "Leave game",
     "roomCode": "Room code",
-    "playersHeading": "Players"
+    "playersHeading": "Players",
+    "startAnyway": "{ready}/{total} ready — tap twice to start anyway"
   },
   "categories": {
     "human": "Human",

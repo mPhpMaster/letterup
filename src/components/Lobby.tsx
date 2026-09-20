@@ -163,6 +163,7 @@ export function Lobby() {
               <input
                 type="checkbox"
                 className="mt-0.5 size-5 shrink-0 accent-mint"
+                aria-label={t("lobby.excludeHard")}
                 checked={settings.excludeHardLetters}
                 onChange={(e) => update({ excludeHardLetters: e.target.checked })}
               />
@@ -213,19 +214,37 @@ export function Lobby() {
 
         {isHost ? (
           <div>
-            <button
-              type="button"
-              className="btn btn-brand w-full py-4 text-xl"
-              disabled={!canStart}
-              onClick={() => {
-                play("reveal");
-                void call("start");
-              }}
-            >
-              {t("lobby.start")} 🎉
-            </button>
+            {/* Waiting for everyone is the host's call, not a rule -- but starting on
+                someone who is still typing their name in should take a second tap. */}
+            {canStart && readyCount < players.length ? (
+              <ConfirmButton
+                className="btn btn-brand w-full py-4 text-xl"
+                onConfirm={() => {
+                  play("reveal");
+                  void call("start");
+                }}
+              >
+                {t("lobby.start")} 🎉
+              </ConfirmButton>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-brand w-full py-4 text-xl"
+                disabled={!canStart}
+                onClick={() => {
+                  play("reveal");
+                  void call("start");
+                }}
+              >
+                {t("lobby.start")} 🎉
+              </button>
+            )}
             <p className="mt-3 text-center text-xs font-bold text-muted">
-              {canStart ? t("lobby.readyCount", { ready: readyCount, total: players.length }) : t("lobby.needCategory")}
+              {!canStart
+                ? t("lobby.needCategory")
+                : readyCount < players.length
+                  ? t("lobby.startAnyway", { ready: readyCount, total: players.length })
+                  : t("lobby.readyCount", { ready: readyCount, total: players.length })}
             </p>
           </div>
         ) : (
