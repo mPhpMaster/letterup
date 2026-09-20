@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { postJson } from "@/lib/api";
 import type { LeaderboardEntry } from "@/lib/types";
 import { Icon } from "./Icon";
-import { Avatar, Spinner } from "./ui";
+import { Avatar, ModalShell, Spinner } from "./ui";
 
 const MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
@@ -55,8 +55,7 @@ export function Leaderboard({
   }, [token, attempt]);
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card max-w-[420px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("leaderboard.title")}>
+    <ModalShell label={t("leaderboard.title")} onClose={onClose} className="max-w-[420px]">
         <div className="flex items-start gap-2">
           <div className="flex-1">
             <h3 className="headline text-xl">{t("leaderboard.title")} 🏆</h3>
@@ -127,7 +126,6 @@ export function Leaderboard({
             })}
           </div>
         )}
-      </div>
-    </div>
+    </ModalShell>
   );
 }

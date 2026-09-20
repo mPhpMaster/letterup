@@ -272,9 +272,9 @@ export function RoundPlay() {
         </div>
 
         {(speech.listening || speechNote) && (
-          <p role="status" className="animate-rise rounded-2xl bg-ink px-4 py-2.5 text-center text-sm font-bold text-cream">
+          <output className="animate-rise block rounded-2xl bg-ink px-4 py-2.5 text-center text-sm font-bold text-cream">
             {speech.listening ? `🎙️ ${t("play.voiceListening", { category: t(`categories.${speech.listening}`) })}` : t(`play.voiceError.${speechNote}`)}
-          </p>
+          </output>
         )}
 
         {emptyWarning && (

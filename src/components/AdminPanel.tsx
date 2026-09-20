@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { postJson } from "@/lib/api";
 import type { AdminState } from "@/lib/types";
 import { Icon } from "./Icon";
-import { Avatar, Spinner } from "./ui";
+import { Avatar, ModalShell, Spinner } from "./ui";
 
 type Tab = "suggestions" | "reports" | "banned";
 
@@ -41,8 +41,7 @@ export function AdminPanel({ token, onClose }: { token: string | null; onClose: 
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card max-w-[460px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("admin.title")}>
+    <ModalShell label={t("admin.title")} onClose={onClose} className="max-w-[460px]">
         <div className="flex items-center gap-2">
           <h3 className="headline flex-1 text-xl">{t("admin.title")}</h3>
           {busy && <Spinner size={16} />}
@@ -142,7 +141,6 @@ export function AdminPanel({ token, onClose }: { token: string | null; onClose: 
               </div>
             ))}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

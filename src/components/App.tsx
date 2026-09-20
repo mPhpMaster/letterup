@@ -22,7 +22,7 @@ import { RoundPlay } from "./RoundPlay";
 import { Voting } from "./Voting";
 import { RoundResults } from "./RoundResults";
 import { FinalLeaderboard } from "./FinalLeaderboard";
-import { AppHeader, Avatar, ConfirmButton, Spinner } from "./ui";
+import { AppHeader, Avatar, ConfirmButton, ModalShell, Spinner } from "./ui";
 
 type Phase =
   | { kind: "booting"; step: BootStep }
@@ -356,9 +356,9 @@ export default function App() {
         />
       )}
       {notice && (
-        <div role="status" className="animate-rise fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-md rounded-3xl bg-ink px-5 py-3.5 text-center text-sm font-bold text-cream shadow-[0_6px_0_var(--color-ink-deep)]">
+        <output className="animate-rise fixed inset-x-4 bottom-4 z-[70] mx-auto block max-w-md rounded-3xl bg-ink px-5 py-3.5 text-center text-sm font-bold text-cream shadow-[0_6px_0_var(--color-ink-deep)]">
           <span dir="auto">{notice}</span>
-        </div>
+        </output>
       )}
     </>
   );
@@ -674,8 +674,7 @@ function GameScreen({
         )}
 
         {goHomeOpen && (
-          <div className="modal-backdrop" onClick={() => setGoHomeOpen(false)}>
-            <div className="modal-card max-w-[360px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("nav.goHomeTitle")}>
+          <ModalShell label={t("nav.goHomeTitle")} onClose={() => setGoHomeOpen(false)} className="max-w-[360px]">
               <h3 className="headline text-xl">{t("nav.goHomeTitle")}</h3>
               <p className="text-sm text-muted">{t("nav.goHomeBody")}</p>
               <div className="flex gap-2">
@@ -686,8 +685,7 @@ function GameScreen({
                   {t("nav.goHomeConfirm")}
                 </button>
               </div>
-            </div>
-          </div>
+          </ModalShell>
         )}
 
         {(error || toast) && (

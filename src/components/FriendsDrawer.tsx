@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { postJson } from "@/lib/api";
 import type { SearchResultView, SocialState } from "@/lib/types";
 import { Icon } from "./Icon";
-import { Avatar, Spinner, Toast } from "./ui";
+import { Avatar, ModalShell, Spinner, Toast } from "./ui";
 
 /** Friends list: follow/unfollow, invite into the current room, or jump into theirs. */
 export function FriendsDrawer({
@@ -56,8 +56,7 @@ export function FriendsDrawer({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card max-w-[380px]" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("friends.title")}>
+    <ModalShell label={t("friends.title")} onClose={onClose} className="max-w-[380px]">
         <div className="flex items-center gap-2">
           <h3 className="headline flex-1 text-xl">{t("friends.title")}</h3>
           <button type="button" className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand transition-transform active:scale-90" onClick={onClose} aria-label={t("common.close")}>
@@ -158,8 +157,7 @@ export function FriendsDrawer({
 
         {searching && <Spinner size={18} />}
         {toast && <Toast>{toast}</Toast>}
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { levelFromPoints, tierFromRank, type Tier } from "@/lib/profileStats";
 import type { GameResultView, ProfileDetails, ProfileView } from "@/lib/types";
 import { Icon, type IconName } from "./Icon";
-import { Avatar, CategoryTile, Spinner } from "./ui";
+import { Avatar, CategoryTile, ModalShell, Spinner } from "./ui";
 
 const TIER_STYLE: Record<Tier, string> = {
   legendary: "bg-ink text-accent",
@@ -46,13 +46,7 @@ export function ProfileModal({
   const { t, locale } = useI18n();
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-card max-h-[92dvh] max-w-[600px] gap-0 overflow-hidden bg-cream p-0!"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-label={t("header.profile")}
-      >
+    <ModalShell label={t("header.profile")} onClose={onClose} className="max-h-[92dvh] max-w-[600px] gap-0 overflow-hidden bg-cream p-0!">
         {loading || !profile ? (
           <div className="grid place-items-center py-16">
             <Spinner />
@@ -73,8 +67,7 @@ export function ProfileModal({
             onUnban={onUnban}
           />
         )}
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

@@ -149,12 +149,9 @@ export function ConfirmButton({
     >
       {compact ? children : armed ? t("common.confirmTap") : children}
       {compact && armed && (
-        <span
-          role="status"
-          className="animate-rise absolute top-full end-0 z-30 mt-2 rounded-xl bg-ink px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-cream shadow-[0_4px_0_var(--color-ink-deep)]"
-        >
+        <output className="animate-rise absolute top-full end-0 z-30 mt-2 rounded-xl bg-ink px-3 py-1.5 text-xs font-extrabold whitespace-nowrap text-cream shadow-[0_4px_0_var(--color-ink-deep)]">
           {t("common.confirmTap")}
-        </span>
+        </output>
       )}
     </button>
   );
@@ -274,6 +271,43 @@ export function PlayerName({
     <button type="button" onClick={onClick} className="flex min-w-0 items-center gap-1.5 text-start hover:underline">
       {content}
     </button>
+  );
+}
+
+/**
+ * Shared frame for every dialog: dimmed backdrop, Escape to close, and a click
+ * anywhere outside the card. The backdrop is a real button so closing by clicking
+ * away is reachable from a keyboard and announced by screen readers.
+ */
+export function ModalShell({
+  label,
+  onClose,
+  className = "",
+  backdropClassName = "",
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  className?: string;
+  backdropClassName?: string;
+  children: ReactNode;
+}) {
+  const { t } = useI18n();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className={`modal-backdrop ${backdropClassName}`}>
+      <button type="button" className="absolute inset-0 cursor-default" aria-label={t("common.close")} onClick={onClose} />
+      <div className={`modal-card relative ${className}`} role="dialog" aria-modal="true" aria-label={label}>
+        {children}
+      </div>
+    </div>
   );
 }
 

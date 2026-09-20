@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Icon } from "./Icon";
+import { ModalShell } from "./ui";
 
 /** Small shared modal for a single free-text field (suggestions, reports, room passwords). */
 export function TextPrompt({
@@ -40,8 +41,8 @@ export function TextPrompt({
 
   return (
     // z-60: these prompts open on top of another modal (profile, leaderboard, friends).
-    <div className="modal-backdrop z-[60]" onClick={onClose}>
-      <form className="modal-card max-w-[360px]" onClick={(e) => e.stopPropagation()} onSubmit={submit} role="dialog" aria-label={title}>
+    <ModalShell label={title} onClose={onClose} className="max-w-[360px] p-0! bg-transparent shadow-none" backdropClassName="z-[60]">
+      <form className="modal-card w-full" onSubmit={submit}>
         <div className="flex items-start gap-2">
           <div className="flex-1">
             <h3 className="headline text-[18px]" dir="auto">
@@ -68,6 +69,8 @@ export function TextPrompt({
             placeholder={placeholder}
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            // The dialog exists to take this one answer; typing should not need a tap first.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
           />
         ) : (
@@ -79,6 +82,7 @@ export function TextPrompt({
             placeholder={placeholder}
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
           />
         )}
@@ -98,6 +102,6 @@ export function TextPrompt({
           </button>
         </div>
       </form>
-    </div>
+    </ModalShell>
   );
 }
