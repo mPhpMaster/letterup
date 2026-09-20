@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { postJson } from "@/lib/api";
 import type { LeaderboardEntry } from "@/lib/types";
@@ -25,16 +25,34 @@ export function Leaderboard({
 }) {
   const { t } = useI18n();
   const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
+  // A failed request used to fall back to an empty list, which read as "nobody has
+  // played yet" -- the one thing it definitely did not mean.
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  const retry = useCallback(() => {
+    setEntries(null);
+    setFailed(false);
+    setAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
     postJson<{ entries: LeaderboardEntry[] }>("/api/social/leaderboard", {}, token ?? undefined)
-      .then((res) => active && setEntries(res.entries))
-      .catch(() => active && setEntries([]));
+      .then((res) => {
+        if (!active) return;
+        setEntries(res.entries);
+        setFailed(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setEntries([]);
+        setFailed(true);
+      });
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [token, attempt]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -57,6 +75,14 @@ export function Leaderboard({
         {!entries ? (
           <div className="grid place-items-center py-8">
             <Spinner />
+          </div>
+        ) : failed ? (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <p className="text-center text-sm font-bold text-ink/70">{t("leaderboard.failed")}</p>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={retry}>
+              <Icon name="replay" size={15} />
+              {t("common.retry")}
+            </button>
           </div>
         ) : entries.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">{t("leaderboard.empty")}</p>

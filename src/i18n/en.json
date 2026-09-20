@@ -329,7 +329,8 @@
     "points": "Points",
     "wins": "Wins",
     "games": "Games",
-    "you": "You"
+    "you": "You",
+    "failed": "Couldn't load the leaderboard."
   },
   "suggest": {
     "open": "Send a suggestion",
