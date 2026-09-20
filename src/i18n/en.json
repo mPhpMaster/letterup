@@ -164,7 +164,8 @@
     "legendUnique": "Unique · 10",
     "legendShared": "Shared · 5",
     "legendInvalid": "Invalid · 0",
-    "wrongLetterVote": "Wrong letter · 👍 to accept"
+    "wrongLetterVote": "Wrong letter · 👍 to accept",
+    "skipCategory": "Skip this category"
   },
   "results": {
     "title": "Round {number} results",

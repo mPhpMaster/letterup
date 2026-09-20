@@ -49,6 +49,8 @@ export interface RoundView {
   voteCategoryIndex: number;
   /** When voting scores itself if the room has not finished first. */
   voteEndsAt: number | null;
+  /** How long the current voting step was given, for the countdown ring. */
+  voteWindowMs: number;
   startedAt: number;
   endsAt: number;
   submittedPlayerIds: string[];

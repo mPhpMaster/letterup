@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isEmbeddedInDiscord } from "@/lib/discord";
 
 /** The slice of the Web Speech API we use; TypeScript's DOM lib doesn't ship it. */
 interface Recognition {
@@ -35,7 +36,12 @@ export type SpeechError = "denied" | "unavailable" | "nothing";
 export function useSpeechInput(locale: string, onText: (key: string, text: string) => void, onError: (error: SpeechError) => void) {
   // Checked after mount: the server render has no `window`, and a mismatch would warn.
   const [supported, setSupported] = useState(false);
-  useEffect(() => setSupported(recognitionCtor() !== null), []);
+  useEffect(() => {
+    // Discord's Activity iframe is served without the `microphone` permission, so
+    // getUserMedia (and with it speech recognition) always fails in there -- a mic
+    // button would only ever say "blocked". https://github.com/discord/embedded-app-sdk/issues/363
+    setSupported(recognitionCtor() !== null && !isEmbeddedInDiscord());
+  }, []);
 
   const [listening, setListening] = useState<string | null>(null);
   const active = useRef<Recognition | null>(null);

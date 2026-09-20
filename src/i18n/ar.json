@@ -176,7 +176,8 @@
     "legendUnique": "فريدة · 10",
     "legendShared": "مكررة · 5",
     "legendInvalid": "غير صالحة · 0",
-    "wrongLetterVote": "حرف خاطئ · 👍 لقبولها"
+    "wrongLetterVote": "حرف خاطئ · 👍 لقبولها",
+    "skipCategory": "تخطَّ هذه الفئة"
   },
   "results": {
     "title": "نتائج الجولة {number}",

@@ -7,11 +7,6 @@ import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
 import { LetterTile, TimerRing } from "./ui";
 
-/** Matches the server: each category gets 5 seconds per player... */
-const SECONDS_PER_PLAYER = 5;
-/** ...and once all are reviewed, the scores lock in after this. */
-const REVIEWED_GRACE_MS = 5_000;
-
 export function Voting() {
   const { state, isHost, hostName, offset, call, refresh } = useGameContext();
   const { t } = useI18n();
@@ -47,7 +42,7 @@ export function Voting() {
             {round.voteEndsAt !== null && (
               <TimerRing
                 remainingMs={round.voteEndsAt - now}
-                totalMs={reviewing ? Math.max(1, state.players.length) * SECONDS_PER_PLAYER * 1000 : REVIEWED_GRACE_MS}
+                totalMs={Math.max(1, round.voteWindowMs)}
                 size={56}
               />
             )}
@@ -83,8 +78,17 @@ export function Voting() {
 
       <div className="z-10 sm:sticky sm:bottom-3">
         {reviewing ? (
-          <div className="waiting">
-            <p className="animate-pulse-soft">{t("vote.waitingOthers")}</p>
+          <div className="flex flex-col gap-2">
+            <div className="waiting">
+              <p className="animate-pulse-soft">{t("vote.waitingOthers")}</p>
+            </div>
+            {/* Nobody is voting on this one (blank answers, someone stepped away): move on. */}
+            {isHost && (
+              <button type="button" className="btn btn-ghost btn-sm self-center" onClick={() => void call("skipCategory")}>
+                {t("vote.skipCategory")}
+                <Icon name="arrowRight" size={16} className="rtl:-scale-x-100" />
+              </button>
+            )}
           </div>
         ) : isHost ? (
           <button type="button" className="btn btn-ink w-full py-4 text-xl" onClick={() => void call("tally")}>

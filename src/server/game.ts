@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from "./passwords";
 import { normalizeCategories } from "@/lib/categories";
 import { normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
 import { computeRoundScores } from "@/lib/scoring";
+import { categoryVoteMs, REVIEWED_GRACE_MS, RESULTS_MS } from "@/lib/voteTiming";
 import type { AnswerView, GameOrigin, GameState, GameStatus, PlayerView, RoundView, SessionUser } from "@/lib/types";
 
 /** Unambiguous room codes: no O/0, I/1, etc. */
@@ -205,7 +206,7 @@ async function maybeMigrateHost(core: Core, now: number): Promise<boolean> {
  * else to vote -- are skipped on the spot. Left to the heartbeat, the room sat on
  * "waiting for everyone to vote" for up to a poll interval with nothing to wait for.
  */
-async function openVoting(round: RoundRow, playerCount: number): Promise<void> {
+async function openVoting(round: RoundRow): Promise<void> {
   const db = admin();
   const { error } = await db.rpc("end_round", { p_round_id: round.id });
   if (error) throw new Error(`end_round: ${error.message}`);
@@ -213,15 +214,15 @@ async function openVoting(round: RoundRow, playerCount: number): Promise<void> {
   if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
   const index = typeof advanced.data === "number" ? advanced.data : 0;
   // end_round stamped one deadline for the whole round; each category gets its own.
-  await stampVoteDeadline(round.id, index, round.categories.length, playerCount);
+  await stampVoteDeadline(round, index);
   // end_round already bumped the game version, and other clients may have fetched
   // before the deadline (and any skip) landed -- bump again so they catch it.
   await touch(round.game_id);
 }
 
-async function endRoundIfNeeded(round: RoundRow | null, now: number, playerCount: number): Promise<boolean> {
+async function endRoundIfNeeded(round: RoundRow | null, now: number): Promise<boolean> {
   if (!round || round.status !== "playing" || now <= Date.parse(round.ends_at) + ANSWER_GRACE_MS) return false;
-  await openVoting(round, playerCount);
+  await openVoting(round);
   return true;
 }
 
@@ -233,22 +234,32 @@ async function endRoundIfNeeded(round: RoundRow | null, now: number, playerCount
 //   * once every category is reviewed     -- when the scores lock in
 //   * after scoring (game in "results")   -- when the next round starts
 // ---------------------------------------------------------------------------
-const VOTE_SECONDS_PER_PLAYER = 5;
-/** After the last category: a moment to look the board over before it scores. */
-const REVIEWED_GRACE_MS = 5_000;
-/** How long the between-rounds scoreboard stays up. */
-const RESULTS_MS = 5_000;
-
-function categoryVoteMs(playerCount: number): number {
-  return VOTE_SECONDS_PER_PLAYER * 1000 * Math.max(1, playerCount);
+/** Answers in a category that anyone could vote on -- blanks are not shown a vote. */
+async function votableCount(roundId: string, category: string): Promise<number> {
+  const { count, error } = await admin()
+    .from("answers")
+    .select("id", { count: "exact", head: true })
+    .eq("round_id", roundId)
+    .eq("category", category)
+    .not("normalized", "is", null)
+    .neq("normalized", "");
+  if (error) throw new Error(`votable answers: ${error.message}`);
+  return count ?? 0;
 }
 
-async function stampVoteDeadline(roundId: string, index: number, total: number, playerCount: number): Promise<void> {
-  const ms = index < total ? categoryVoteMs(playerCount) : REVIEWED_GRACE_MS;
+/** The window the category at `index` gets, or the look-over grace once they're all done. */
+async function voteWindowFor(round: Pick<RoundRow, "id" | "categories">, index: number): Promise<number> {
+  const category = round.categories[index];
+  if (category === undefined) return REVIEWED_GRACE_MS;
+  return categoryVoteMs(await votableCount(round.id, category));
+}
+
+async function stampVoteDeadline(round: Pick<RoundRow, "id" | "categories">, index: number): Promise<void> {
+  const ms = await voteWindowFor(round, index);
   const { error } = await admin()
     .from("rounds")
     .update({ vote_ends_at: new Date(Date.now() + ms).toISOString() })
-    .eq("id", roundId);
+    .eq("id", round.id);
   if (error) throw new Error(`vote deadline: ${error.message}`);
 }
 
@@ -261,11 +272,10 @@ async function stampVoteDeadline(roundId: string, index: number, total: number, 
  * read the new index beside the old, already-expired deadline and close that
  * category too.
  */
-async function closeCategoryOnTimeout(round: RoundRow, playerCount: number): Promise<boolean> {
+async function closeCategoryOnTimeout(round: RoundRow): Promise<boolean> {
   const db = admin();
   const next = round.vote_category_index + 1;
-  const total = round.categories.length;
-  const ms = next < total ? categoryVoteMs(playerCount) : REVIEWED_GRACE_MS;
+  const ms = await voteWindowFor(round, next);
   const moved = await db
     .from("rounds")
     .update({ vote_category_index: next, vote_ends_at: new Date(Date.now() + ms).toISOString() })
@@ -279,7 +289,7 @@ async function closeCategoryOnTimeout(round: RoundRow, playerCount: number): Pro
   // The next category might have nothing to vote on either; only then restamp.
   const advanced = await db.rpc("advance_vote_category", { p_round_id: round.id });
   if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
-  if (typeof advanced.data === "number" && advanced.data > next) await stampVoteDeadline(round.id, advanced.data, total, playerCount);
+  if (typeof advanced.data === "number" && advanced.data > next) await stampVoteDeadline(round, advanced.data);
   return true;
 }
 
@@ -390,6 +400,11 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
       status: r.status,
       voteCategoryIndex: r.vote_category_index,
       voteEndsAt: r.vote_ends_at ? Date.parse(r.vote_ends_at) : null,
+      // What that deadline was set from, so the ring on screen drains at the right rate.
+      voteWindowMs:
+        r.vote_category_index < r.categories.length
+          ? categoryVoteMs(answerRows.filter((a) => a.category === r.categories[r.vote_category_index] && a.normalized).length)
+          : REVIEWED_GRACE_MS,
       startedAt: Date.parse(r.started_at),
       endsAt: Date.parse(r.ends_at),
       submittedPlayerIds: check(subs, "submissions").map((s) => s.player_id),
@@ -643,7 +658,7 @@ export const actions: Record<string, Action> = {
     const core = await loadCore(gameId);
     const now = Date.now();
     const hostChanged = await maybeMigrateHost(core, now);
-    const ended = core.game.status === "playing" && (await endRoundIfNeeded(await currentRound(core.game), now, core.players.length));
+    const ended = core.game.status === "playing" && (await endRoundIfNeeded(await currentRound(core.game), now));
     // Someone dropping out can be exactly what the current category was waiting on,
     // and nobody else is voting to trigger it -- so the heartbeat checks too. Only
     // bump the game version when the category actually moved, or every poll would
@@ -657,11 +672,11 @@ export const actions: Record<string, Action> = {
           // Every category reviewed and the look-over time is up: score it without the host.
           await settleRound(core, voting);
         } else if (expired) {
-          movedOn = await closeCategoryOnTimeout(voting, core.players.length);
+          movedOn = await closeCategoryOnTimeout(voting);
         } else {
           const moved = await db.rpc("advance_vote_category", { p_round_id: voting.id });
           if (!moved.error && typeof moved.data === "number" && moved.data !== voting.vote_category_index) {
-            await stampVoteDeadline(voting.id, moved.data, voting.categories.length, core.players.length);
+            await stampVoteDeadline(voting, moved.data);
             movedOn = true;
           }
         }
@@ -795,7 +810,7 @@ export const actions: Record<string, Action> = {
 
       const everyoneDone = m.players.filter((p) => p.id === m.me.id || isOnline(p, now)).every((p) => submittedIds.has(p.id));
       if (everyoneDone) {
-        await openVoting(round, m.players.length);
+        await openVoting(round);
       } else {
         await touch(m.game.id);
       }
@@ -833,12 +848,40 @@ export const actions: Record<string, Action> = {
     return buildState(user, m.game.id);
   },
 
+  /** Host moves voting on without waiting for the clock (nobody is voting on this one). */
+  async skipCategory(user, body) {
+    const m = await requireMember(user, body);
+    requireHost(m);
+    requireStatus(m, "voting");
+    const round = await currentRound(m.game);
+    if (!round || round.status !== "voting" || round.vote_category_index >= round.categories.length) {
+      return buildState(user, m.game.id);
+    }
+    const next = round.vote_category_index + 1;
+    const db = admin();
+    const moved = await db
+      .from("rounds")
+      .update({ vote_category_index: next, vote_ends_at: new Date(Date.now() + (await voteWindowFor(round, next))).toISOString() })
+      .eq("id", round.id)
+      .eq("status", "voting")
+      .eq("vote_category_index", round.vote_category_index)
+      .select("id");
+    if (moved.error) throw new Error(`skip category: ${moved.error.message}`);
+    if (moved.data.length > 0) {
+      // The next one may have nothing to vote on either.
+      const advanced = await db.rpc("advance_vote_category", { p_round_id: round.id });
+      if (!advanced.error && typeof advanced.data === "number" && advanced.data > next) await stampVoteDeadline(round, advanced.data);
+      await touch(m.game.id);
+    }
+    return buildState(user, m.game.id);
+  },
+
   async endRound(user, body) {
     const m = await requireMember(user, body);
     requireHost(m);
     requireStatus(m, "playing");
     const round = await currentRound(m.game);
-    if (round) await openVoting(round, m.players.length);
+    if (round) await openVoting(round);
     return buildState(user, m.game.id);
   },
 
@@ -863,7 +906,7 @@ export const actions: Record<string, Action> = {
     if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
     // Finished early: the next category gets its own full clock.
     if (before && typeof advanced.data === "number" && advanced.data >= 0 && advanced.data !== before.vote_category_index) {
-      await stampVoteDeadline(before.id, advanced.data, before.categories.length, m.players.length);
+      await stampVoteDeadline(before, advanced.data);
     }
     await touch(m.game.id);
     return buildState(user, m.game.id);
