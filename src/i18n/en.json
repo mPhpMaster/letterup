@@ -166,7 +166,8 @@
     "legendShared": "Shared · 5",
     "legendInvalid": "Invalid · 0",
     "wrongLetterVote": "Wrong letter · 👍 to accept",
-    "skipCategory": "Skip this category"
+    "skipCategory": "Skip this category",
+    "lookUp": "Search images for “{word}”"
   },
   "results": {
     "title": "Round {number} results",

@@ -562,6 +562,13 @@ function GameScreen({
   // A reload was fine on the web, but inside the Activity it re-runs the boot,
   // which rejoins this channel's game -- so leaving looked like the game had shut
   // and reopened. Hand control back to the shell and let it show the room list.
+  // Inside the Activity a plain window.open is blocked; Discord opens links itself
+  // (with its own "you are leaving Discord" prompt).
+  const openLink = (url: string) => {
+    if (sdk) void sdk.commands.openExternalLink({ url }).catch(() => flash(t("errors.generic")));
+    else window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const goHome = () => onExit();
 
   // Removed from the room (kicked, or the room was cleaned up): say so and go home.
@@ -591,6 +598,7 @@ function GameScreen({
       copyInvite,
       openDiscordInvite,
       leaveRoom,
+      openLink,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- leaveRoom/copyInvite close over stable values
   }, [state, offset, participantIds, call, refresh, copyInvite, onOpenProfile, t]);

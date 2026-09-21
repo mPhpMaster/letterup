@@ -99,7 +99,7 @@ function AnswerRow({
   answer: AnswerView | undefined;
   score: AnswerScore | undefined;
 }) {
-  const { state, isHost, call, openProfile } = useGameContext();
+  const { state, isHost, call, openProfile, openLink } = useGameContext();
   const { t } = useI18n();
   const { play } = useSound();
   const mine = player.id === state.me.playerId;
@@ -195,6 +195,18 @@ function AnswerRow({
       </div>
 
       <div className="ms-auto flex shrink-0 items-center gap-1.5">
+        {/* Settle "is that even a thing?" without leaving the game: image results for the word. */}
+        {hasValue && (
+          <button
+            type="button"
+            className="grid size-8 shrink-0 place-items-center rounded-xl bg-paper text-ink/45 transition-colors hover:text-brand"
+            aria-label={t("vote.lookUp", { word: answer!.value })}
+            title={t("vote.lookUp", { word: answer!.value })}
+            onClick={() => openLink(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(answer!.value)}`)}
+          >
+            <Icon name="search" size={15} />
+          </button>
+        )}
         <span className={`hidden rounded-full px-2 py-1 text-[10px] font-extrabold uppercase sm:block ${BADGE_STYLE[status]}`}>{statusLabel}</span>
         <span className="headline min-w-10 text-end text-sm text-ink/70 tabular-nums">+{points}</span>
 

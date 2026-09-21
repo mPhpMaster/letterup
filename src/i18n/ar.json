@@ -178,7 +178,8 @@
     "legendShared": "مكررة · 5",
     "legendInvalid": "غير صالحة · 0",
     "wrongLetterVote": "حرف خاطئ · 👍 لقبولها",
-    "skipCategory": "تخطَّ هذه الفئة"
+    "skipCategory": "تخطَّ هذه الفئة",
+    "lookUp": "ابحث عن صور «{word}»"
   },
   "results": {
     "title": "نتائج الجولة {number}",

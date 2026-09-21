@@ -24,6 +24,8 @@ export interface GameContextValue {
   openDiscordInvite: (() => void) | null;
   /** Leaves the room and returns to the start page. */
   leaveRoom: () => void;
+  /** Opens a URL outside the game -- through Discord's own prompt inside the Activity. */
+  openLink: (url: string) => void;
 }
 
 export const GameContext = createContext<GameContextValue | null>(null);
