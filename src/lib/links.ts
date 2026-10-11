@@ -21,6 +21,7 @@ export interface GameLink {
 /**
  * The developer's other games, shown on the home screen and after a match.
  * A game with no URL yet is still listed, marked "soon" and not clickable.
+ * (Keeping that path: the next game can go in before it has an address.)
  */
 export const OTHER_GAMES: GameLink[] = [
   {
@@ -41,7 +42,7 @@ export const OTHER_GAMES: GameLink[] = [
       en: "A party game for the whole room, in Arabic or English.",
       ar: "لعبة حفلات جماعية بالعربي أو الإنجليزي.",
     },
-    url: "", // runs locally for now; drop its address in here once it is deployed
+    url: "https://maqlab.onrender.com",
   },
 ];
 
