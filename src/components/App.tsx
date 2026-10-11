@@ -223,6 +223,13 @@ export default function App() {
     else window.location.href = "/";
   };
 
+  // Same rule as in a game: inside the Activity, Discord opens the link, not us.
+  const openLinkFromShell = (url: string) => {
+    const sdk = discordBoot.current?.sdk;
+    if (sdk) void sdk.commands.openExternalLink({ url }).catch(() => flash(t("errors.generic")));
+    else window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const signOut = () => {
     void postJson("/api/auth/logout", {})
       .catch(() => {})
@@ -400,6 +407,7 @@ export default function App() {
           onOpenAdmin={() => setOverlay({ kind: "admin" })}
           onOpenProfile={setProfileId}
           onSignOut={signOut}
+          onOpenLink={openLinkFromShell}
           busy={busy}
           error={joinError}
           initialCode={roomFromUrl()}

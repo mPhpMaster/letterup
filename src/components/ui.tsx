@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { categoryEmoji, categoryTone, TONES, toneBg, toneSolid } from "@/lib/categories";
+import { DONATE_URL } from "@/lib/links";
 import { useSound } from "@/lib/sound";
 import type { PlayerView } from "@/lib/types";
 import { Icon } from "./Icon";
@@ -308,6 +309,21 @@ export function ModalShell({
         {children}
       </div>
     </div>
+  );
+}
+
+/**
+ * "Buy me a coffee" style link, shown only when NEXT_PUBLIC_DONATE_URL is set.
+ * Giving is never asked for mid-game and never gates anything.
+ */
+export function SupportLink({ onOpen, className = "" }: { onOpen: (url: string) => void; className?: string }) {
+  const { t } = useI18n();
+  if (!DONATE_URL) return null;
+  return (
+    <button type="button" className={`text-xs font-bold text-muted hover:text-brand hover:underline ${className}`} onClick={() => onOpen(DONATE_URL)}>
+      <Icon name="heart" size={13} className="me-1 inline" />
+      {t("common.support")}
+    </button>
   );
 }
 

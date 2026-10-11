@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { RoomSummary, SessionUser } from "@/lib/types";
 import { Icon } from "./Icon";
 import { RoomList } from "./RoomList";
-import { AppHeader, Avatar, Spinner } from "./ui";
+import { AppHeader, Avatar, Spinner, SupportLink } from "./ui";
 
 const sanitize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
 
@@ -22,6 +22,7 @@ export function RoomChoice({
   onOpenAdmin,
   onOpenProfile,
   onSignOut,
+  onOpenLink,
   busy,
   error,
   initialCode = "",
@@ -38,6 +39,8 @@ export function RoomChoice({
   onOpenAdmin: () => void;
   onOpenProfile: (userId: string) => void;
   onSignOut: () => void;
+  /** Opens an external page (Discord's prompt inside the Activity). */
+  onOpenLink: (url: string) => void;
   busy: boolean;
   error?: string | null;
   initialCode?: string;
@@ -156,6 +159,7 @@ export function RoomChoice({
             <Icon name="signOut" size={13} className="me-1 inline rtl:-scale-x-100" />
             {t("room.signOut")}
           </button>
+          <SupportLink onOpen={onOpenLink} className="self-center" />
         </div>
 
         <RoomList token={token} onJoin={onJoinRoom} />

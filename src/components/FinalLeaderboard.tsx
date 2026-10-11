@@ -7,7 +7,7 @@ import { useSound } from "@/lib/sound";
 import { AnswersBoard } from "./AnswersBoard";
 import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
-import { Avatar, ConfirmButton, Confetti, PlayerName } from "./ui";
+import { Avatar, ConfirmButton, Confetti, PlayerName, SupportLink } from "./ui";
 
 /** Podium blocks, in visual order 2nd · 1st · 3rd (flex follows direction, so RTL mirrors it). */
 const PODIUM = [
@@ -17,7 +17,7 @@ const PODIUM = [
 ] as const;
 
 export function FinalLeaderboard() {
-  const { state, isHost, hostName, call, openProfile, leaveRoom } = useGameContext();
+  const { state, isHost, hostName, call, openProfile, leaveRoom, openLink } = useGameContext();
   const { t } = useI18n();
   const { play } = useSound();
   const ranked = rankByScore(state.players);
@@ -138,6 +138,7 @@ export function FinalLeaderboard() {
             <Icon name="signOut" size={15} className="rtl:-scale-x-100" />
             {t("final.leave")}
           </ConfirmButton>
+          <SupportLink onOpen={openLink} className="self-center" />
         </div>
       </section>
     </div>

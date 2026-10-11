@@ -49,6 +49,7 @@ export type IconName =
   | "trophy"
   | "mic"
   | "search"
+  | "heart"
   | "book";
 
 const PATHS: Record<IconName, string> = {
@@ -99,6 +100,7 @@ const PATHS: Record<IconName, string> = {
   book: "M12 6.5C10.3 5.2 8 4.5 4 4.5v13c4 0 6.3.7 8 2 1.7-1.3 4-2 8-2v-13c-4 0-6.3.7-8 2zM12 6.5v13",
   mic: "M9 5a3 3 0 016 0v6a3 3 0 01-6 0V5zM5.5 11a6.5 6.5 0 0013 0M12 17.5V21M8.5 21h7",
   search: "M11 4a7 7 0 100 14 7 7 0 000-14zM16.2 16.2L21 21",
+  heart: "M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0112 8.4a4.1 4.1 0 017.5 2.2C19.5 15.4 12 20 12 20z",
 };
 
 export function Icon({

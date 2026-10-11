@@ -16,7 +16,8 @@
     "dismiss": "Dismiss",
     "close": "Close",
     "cancel": "Cancel",
-    "confirmTap": "Tap again to confirm"
+    "confirmTap": "Tap again to confirm",
+    "support": "Enjoying LetterUp? Buy me a coffee ☕"
   },
   "boot": {
     "connecting": "Connecting to Discord…",
