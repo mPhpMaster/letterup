@@ -8,7 +8,7 @@ import { useSound } from "@/lib/sound";
 import type { SettingsView } from "@/lib/types";
 import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
-import { Avatar, ConfirmButton, PlayerName, SupportLink } from "./ui";
+import { Avatar, ConfirmButton, OtherGames, PlayerName, SupportLink } from "./ui";
 
 const DURATIONS = [15, 30, 45, 60, 90];
 const ROUND_COUNTS = [3, 5, 10];
@@ -278,6 +278,8 @@ export function Lobby() {
         {/* Waiting for the room to fill is the calmest moment in the game. */}
         <SupportLink onOpen={openLink} className="self-center" />
       </section>
+
+      <OtherGames onOpen={openLink} />
     </div>
   );
 }
