@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { categoryEmoji, categoryTone, TONES, toneBg, toneSolid } from "@/lib/categories";
-import { DONATE_URL, liveGames } from "@/lib/links";
+import { DONATE_URL, OTHER_GAMES } from "@/lib/links";
 import { useSound } from "@/lib/sound";
 import type { PlayerView } from "@/lib/types";
 import { Icon } from "./Icon";
@@ -327,33 +327,47 @@ export function SupportLink({ onOpen, className = "" }: { onOpen: (url: string) 
   );
 }
 
-/** The developer's other games. Nothing renders when none has a link yet. */
+/** The developer's other games; ones without a link yet are listed as coming soon. */
 export function OtherGames({ onOpen }: { onOpen: (url: string) => void }) {
   const { t, locale } = useI18n();
-  const games = liveGames();
-  if (games.length === 0) return null;
+  if (OTHER_GAMES.length === 0) return null;
   return (
     <section className="card-pop-sm animate-rise flex flex-col gap-2">
       <p className="kicker">{t("games.title")}</p>
-      {games.map((game) => (
-        <button
-          key={game.id}
-          type="button"
-          className="flex items-center gap-3 rounded-2xl bg-cream p-2.5 text-start transition-colors hover:bg-accent/20"
-          onClick={() => onOpen(game.url)}
-        >
-          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-paper text-xl">{game.emoji}</span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-extrabold" dir="auto">
-              {game.name[locale]}
+      {OTHER_GAMES.map((game) => {
+        const body = (
+          <>
+            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-paper text-xl">{game.emoji}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-extrabold" dir="auto">
+                {game.name[locale]}
+              </span>
+              <span className="block text-[11px] font-semibold text-muted" dir="auto">
+                {game.blurb[locale]}
+              </span>
             </span>
-            <span className="block text-[11px] font-semibold text-muted" dir="auto">
-              {game.blurb[locale]}
-            </span>
-          </span>
-          <Icon name="arrowRight" size={16} className="shrink-0 text-ink/35 rtl:-scale-x-100" />
-        </button>
-      ))}
+            {game.url ? (
+              <Icon name="arrowRight" size={16} className="shrink-0 text-ink/35 rtl:-scale-x-100" />
+            ) : (
+              <span className="shrink-0 rounded-full bg-accent/30 px-2 py-1 text-[10px] font-extrabold text-ink/70">{t("games.soon")}</span>
+            )}
+          </>
+        );
+        return game.url ? (
+          <button
+            key={game.id}
+            type="button"
+            className="flex items-center gap-3 rounded-2xl bg-cream p-2.5 text-start transition-colors hover:bg-accent/20"
+            onClick={() => onOpen(game.url)}
+          >
+            {body}
+          </button>
+        ) : (
+          <div key={game.id} className="flex items-center gap-3 rounded-2xl bg-cream/60 p-2.5 text-start">
+            {body}
+          </div>
+        );
+      })}
     </section>
   );
 }

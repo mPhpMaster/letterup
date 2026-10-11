@@ -376,6 +376,7 @@
     "roomGone": "You're no longer in that room."
   },
   "games": {
-    "title": "More games by the developer"
+    "title": "More games by the developer",
+    "soon": "Soon"
   }
 }

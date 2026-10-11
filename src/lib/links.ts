@@ -14,13 +14,13 @@ export interface GameLink {
   emoji: string;
   name: { en: string; ar: string };
   blurb: { en: string; ar: string };
-  /** Empty while a game has nowhere to send people yet -- those are skipped. */
+  /** Empty while a game has nowhere to send people yet -- it is listed as "soon". */
   url: string;
 }
 
 /**
  * The developer's other games, shown on the home screen and after a match.
- * Add a game by giving it a URL; an empty URL hides the entry.
+ * A game with no URL yet is still listed, marked "soon" and not clickable.
  */
 export const OTHER_GAMES: GameLink[] = [
   {
@@ -41,7 +41,7 @@ export const OTHER_GAMES: GameLink[] = [
       en: "A party game for the whole room, in Arabic or English.",
       ar: "لعبة حفلات جماعية بالعربي أو الإنجليزي.",
     },
-    url: "", // not launched yet
+    url: "", // runs locally for now; drop its address in here once it is deployed
   },
 ];
 
