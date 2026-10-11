@@ -7,7 +7,7 @@ import { useSound } from "@/lib/sound";
 import { AnswersBoard } from "./AnswersBoard";
 import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
-import { Avatar, ConfirmButton, Confetti, PlayerName, SupportLink } from "./ui";
+import { Avatar, ConfirmButton, Confetti, OtherGames, PlayerName, SupportLink } from "./ui";
 
 /** Podium blocks, in visual order 2nd · 1st · 3rd (flex follows direction, so RTL mirrors it). */
 const PODIUM = [
@@ -139,6 +139,11 @@ export function FinalLeaderboard() {
             {t("final.leave")}
           </ConfirmButton>
           <SupportLink onOpen={openLink} className="self-center" />
+        </div>
+
+        {/* The game is over: a fine moment to point at what else there is to play. */}
+        <div className="mt-5 text-start">
+          <OtherGames onOpen={openLink} />
         </div>
       </section>
     </div>

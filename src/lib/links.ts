@@ -8,3 +8,41 @@
 const configured = process.env.NEXT_PUBLIC_DONATE_URL;
 
 export const DONATE_URL = (configured === undefined ? "https://paypal.me/mfsafadi" : configured).trim();
+
+export interface GameLink {
+  id: string;
+  emoji: string;
+  name: { en: string; ar: string };
+  blurb: { en: string; ar: string };
+  /** Empty while a game has nowhere to send people yet -- those are skipped. */
+  url: string;
+}
+
+/**
+ * The developer's other games, shown on the home screen and after a match.
+ * Add a game by giving it a URL; an empty URL hides the entry.
+ */
+export const OTHER_GAMES: GameLink[] = [
+  {
+    id: "guess-the-language",
+    emoji: "💻",
+    name: { en: "Guess the Language", ar: "خمّن اللغة" },
+    blurb: {
+      en: "A code snippet appears — name the language. Seven quiz modes and a live leaderboard.",
+      ar: "يظهر كود وعليك تخمين اللغة. سبعة أنماط ولوحة صدارة مباشرة.",
+    },
+    url: "https://guess-the-language-chi.vercel.app",
+  },
+  {
+    id: "maqlab",
+    emoji: "🎭",
+    name: { en: "MAQLAB", ar: "مقلب" },
+    blurb: {
+      en: "A party game for the whole room, in Arabic or English.",
+      ar: "لعبة حفلات جماعية بالعربي أو الإنجليزي.",
+    },
+    url: "", // not launched yet
+  },
+];
+
+export const liveGames = (): GameLink[] => OTHER_GAMES.filter((g) => g.url);

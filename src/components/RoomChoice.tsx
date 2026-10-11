@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { RoomSummary, SessionUser } from "@/lib/types";
 import { Icon } from "./Icon";
 import { RoomList } from "./RoomList";
-import { AppHeader, Avatar, Spinner, SupportLink } from "./ui";
+import { AppHeader, Avatar, OtherGames, Spinner, SupportLink } from "./ui";
 
 const sanitize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
 
@@ -163,6 +163,8 @@ export function RoomChoice({
         </div>
 
         <RoomList token={token} onJoin={onJoinRoom} />
+
+        <OtherGames onOpen={onOpenLink} />
       </main>
     </div>
   );

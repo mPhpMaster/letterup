@@ -374,5 +374,8 @@
   "errors": {
     "generic": "Something went wrong.",
     "roomGone": "You're no longer in that room."
+  },
+  "games": {
+    "title": "More games by the developer"
   }
 }
