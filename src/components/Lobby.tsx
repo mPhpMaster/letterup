@@ -8,13 +8,13 @@ import { useSound } from "@/lib/sound";
 import type { SettingsView } from "@/lib/types";
 import { useGameContext } from "./GameContext";
 import { Icon } from "./Icon";
-import { Avatar, ConfirmButton, PlayerName } from "./ui";
+import { Avatar, ConfirmButton, PlayerName, SupportLink } from "./ui";
 
 const DURATIONS = [15, 30, 45, 60, 90];
 const ROUND_COUNTS = [3, 5, 10];
 
 export function Lobby() {
-  const { state, me, isHost, hostName, participantIds, call, openProfile, openFriends, copyInvite, openDiscordInvite, leaveRoom } =
+  const { state, me, isHost, hostName, participantIds, call, openProfile, openFriends, copyInvite, openDiscordInvite, leaveRoom, openLink } =
     useGameContext();
   const { t, locale } = useI18n();
   const { play } = useSound();
@@ -274,6 +274,9 @@ export function Lobby() {
             </div>
           </div>
         )}
+
+        {/* Waiting for the room to fill is the calmest moment in the game. */}
+        <SupportLink onOpen={openLink} className="self-center" />
       </section>
     </div>
   );
