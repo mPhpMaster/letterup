@@ -7,7 +7,7 @@ import { normalizeCategories } from "@/lib/categories";
 import { firstAnswer, isRealAnswer, normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
 import { computeRoundScores } from "@/lib/scoring";
 import { categoryVoteMs, REVIEWED_GRACE_MS, RESULTS_MS } from "@/lib/voteTiming";
-import { verifyRoundAnswers } from "./verify";
+import { recordVerdicts, verifyRoundAnswers } from "./verify";
 import type { AnswerView, GameOrigin, GameState, GameStatus, PlayerView, RoundView, SessionUser } from "@/lib/types";
 
 /** Unambiguous room codes: no O/0, I/1, etc. */
@@ -84,6 +84,8 @@ interface AnswerRow {
   host_verdict: boolean | null;
   verified: boolean;
   verified_as: string | null;
+  needs_approval: boolean;
+  blocked: boolean;
   is_valid: boolean | null;
   points: number;
 }
@@ -389,6 +391,8 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
             hostVerdict: a.host_verdict,
             verified: a.verified ?? false,
             verifiedAs: a.verified_as ?? null,
+            needsApproval: a.needs_approval ?? false,
+            blocked: a.blocked ?? false,
             isValid: a.is_valid,
             points: a.points,
             approvals: mine.filter((v) => v.approve).length,
@@ -1023,8 +1027,10 @@ async function settleRound(core: Core, round: RoundRow): Promise<void> {
       .eq("answers.round_id", round.id)
       .returns<VoteRow[]>(),
   ]);
+  const answerRows = check(answers, "answers");
+  const voteList = check(votes, "votes").map((v) => ({ answerId: v.answer_id, approve: v.approve }));
   const scores = computeRoundScores(
-    check(answers, "answers").map((a) => ({
+    answerRows.map((a) => ({
       id: a.id,
       playerId: a.player_id,
       category: a.category,
@@ -1032,8 +1038,9 @@ async function settleRound(core: Core, round: RoundRow): Promise<void> {
       autoValid: a.auto_valid,
       hostVerdict: a.host_verdict,
       verified: a.verified ?? false,
+      needsApproval: a.needs_approval ?? false,
     })),
-    check(votes, "votes").map((v) => ({ answerId: v.answer_id, approve: v.approve })),
+    voteList,
     // With only two players nobody can outvote the author, so the single opponent's 👎 decides.
     core.players.length,
   );
@@ -1045,6 +1052,7 @@ async function settleRound(core: Core, round: RoundRow): Promise<void> {
   // Someone else scored it first (several clients notice an expiry at once): their
   // countdown stands.
   if (scored !== true) return;
+  await recordVerdicts(answerRows, voteList, core.players.length);
   // Start the scoreboard's countdown to the next round.
   const stamp = await db.from("rounds").update({ vote_ends_at: new Date(Date.now() + RESULTS_MS).toISOString() }).eq("id", round.id);
   if (stamp.error) throw new Error(`results deadline: ${stamp.error.message}`);

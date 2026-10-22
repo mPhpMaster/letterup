@@ -143,8 +143,8 @@
   },
   "vote": {
     "title": "Vote on the answers",
-    "help": "Give 👍 or 👎 to other players' answers. An answer is thrown out if more players reject it than accept it (its author counts as one 👍). A 👍 can also rescue an answer marked “wrong letter” (like salim for س).",
-    "helpTwoPlayers": "With two players your 👎 decides: reject an answer and it scores nothing. A 👍 can also rescue an answer marked “wrong letter” (like salim for س).",
+    "help": "Give 👍 or 👎 to other players' answers. An answer is thrown out if more players reject it than accept it (its author counts as one 👍). Answers marked “wrong letter” or “not in the dictionary” need a 👍 to count — and every 👍 / 👎 teaches the game for next time.",
+    "helpTwoPlayers": "With two players your 👎 decides: reject an answer and it scores nothing. Answers marked “wrong letter” or “not in the dictionary” need a 👍 to count — and every 👍 / 👎 teaches the game for next time.",
     "rules": "Unique valid answer: 10 · Shared answer: 5 · Invalid or blank: 0",
     "hostHelp": "As host you can overrule other players' answers with ✓ or ✗.",
     "noAnswer": "No answer",
@@ -173,7 +173,11 @@
     "lookUp": "Search images for “{word}”",
     "verified": "Confirmed",
     "verifiedHint": "Recognised automatically — no vote needed",
-    "spelled": "Did you mean “{word}”?"
+    "spelled": "Did you mean “{word}”?",
+    "unknown": "Not in the dictionary",
+    "unknownVote": "Not in the dictionary · 👍 to accept",
+    "blocked": "Rejected before",
+    "blockedVote": "Rejected before · 👍 to accept"
   },
   "results": {
     "title": "Round {number} results",

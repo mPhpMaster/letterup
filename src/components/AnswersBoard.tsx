@@ -49,6 +49,7 @@ export function AnswersBoard({ mode }: { mode: "vote" | "final" }) {
             autoValid: a.autoValid,
             hostVerdict: a.hostVerdict,
             verified: a.verified,
+            needsApproval: a.needsApproval,
           })),
           round.votes,
           state.players.length,
@@ -176,7 +177,9 @@ function AnswerRow({
     : !valid
       ? answer && !answer.autoValid
         ? t(mode === "vote" ? "vote.wrongLetterVote" : "vote.wrongLetter")
-        : t("vote.rejected")
+        : answer?.needsApproval && answer.hostVerdict == null
+          ? t(`vote.${answer.blocked ? "blocked" : "unknown"}${mode === "vote" ? "Vote" : ""}`)
+          : t("vote.rejected")
       : duplicate
         ? t("vote.duplicate")
         : t("vote.unique");

@@ -78,3 +78,10 @@ test("a confirmed answer counts without votes; only the host can overrule it", (
   assert.equal(isAnswerValid({ ...a, hostVerdict: false }, [], 4), false, "host can still rule it out");
   assert.equal(isAnswerValid(ans("b", "p1", "country", "", { verified: true }), [], 4), false, "blank stays blank");
 });
+
+test("an answer the game doesn't know needs a thumbs up", () => {
+  const a = ans("a", "p1", "plant", "fulful", { needsApproval: true });
+  assert.equal(isAnswerValid(a, [], 2), false, "nobody vouched for it");
+  assert.equal(isAnswerValid(a, [{ answerId: "a", approve: true }], 2), true, "the opponent accepts");
+  assert.equal(isAnswerValid({ ...a, hostVerdict: true }, [], 2), true, "or the host does");
+});

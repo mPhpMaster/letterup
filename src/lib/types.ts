@@ -35,6 +35,10 @@ export interface AnswerView {
   verified: boolean;
   /** The recognised spelling ("palastine" -> "palestine"), when there is one. */
   verifiedAs: string | null;
+  /** The game doesn't know this word: it needs a 👍 to count. */
+  needsApproval: boolean;
+  /** Players rejected this word in earlier games. */
+  blocked: boolean;
   isValid: boolean | null;
   points: number;
   approvals: number;
