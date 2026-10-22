@@ -4,7 +4,7 @@ import { HttpError } from "./errors";
 import { assertNotBanned } from "./admin";
 import { hashPassword, verifyPassword } from "./passwords";
 import { normalizeCategories } from "@/lib/categories";
-import { normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
+import { firstAnswer, isRealAnswer, normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
 import { computeRoundScores } from "@/lib/scoring";
 import { categoryVoteMs, REVIEWED_GRACE_MS, RESULTS_MS } from "@/lib/voteTiming";
 import type { AnswerView, GameOrigin, GameState, GameStatus, PlayerView, RoundView, SessionUser } from "@/lib/types";
@@ -781,10 +781,14 @@ export const actions: Record<string, Action> = {
 
     const input = (body.answers ?? {}) as Record<string, unknown>;
     const rows = round.categories.map((category) => {
-      const value = String(input[category] ?? "")
+      const raw = String(input[category] ?? "")
         .replace(/[ -]/g, "")
         .trim()
         .slice(0, MAX_ANSWER_LENGTH);
+      // One answer per category: a hedged list keeps only its first item.
+      const first = firstAnswer(raw).value;
+      // A bare letter is a placeholder, not an answer: store it as blank.
+      const value = isRealAnswer(first) ? first : "";
       const normalized = normalizeAnswer(value);
       return {
         round_id: round.id,

@@ -29,6 +29,32 @@ export function normalizeAnswer(raw: string): string {
     .trim();
 }
 
+/**
+ * Things people put between several answers to hedge: commas (Latin and Arabic),
+ * semicolons, slashes, pipes, "&", "+", line breaks, and a spaced "or" / "أو".
+ * Hyphens and plain spaces are left alone -- "Guinea-Bissau", "New York" and
+ * "Trinidad and Tobago" are single answers.
+ */
+const LIST_SEPARATOR = /[,\u060C;\u061B/\\|&+\n\r]|\s+(?:or|\u0623\u0648|\u0627\u0648)\s+/iu;
+
+/**
+ * One answer per category: when a player lists several ("Philippines, Palestine,
+ * Portugal"), only the first counts. `trimmed` says whether anything was dropped.
+ */
+export function firstAnswer(raw: string): { value: string; trimmed: boolean } {
+  const parts = raw.split(LIST_SEPARATOR).map((p) => p.trim()).filter(Boolean);
+  const value = parts[0] ?? "";
+  return { value, trimmed: parts.length > 1 };
+}
+
+/**
+ * Whether an answer says anything. Typing only the round letter ("P", "ب") to look
+ * busy is not an answer, so anything under two letters counts as blank.
+ */
+export function isRealAnswer(raw: string): boolean {
+  return normalizeAnswer(raw).replace(/\s+/g, "").length >= 2;
+}
+
 /** True when the (already normalized) answer starts with the round letter. Leading "ال" / "the " is tolerated. */
 export function startsWithLetter(normalized: string, letter: string): boolean {
   const target = normalizeAnswer(letter);

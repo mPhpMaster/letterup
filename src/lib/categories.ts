@@ -5,7 +5,7 @@ export const CATEGORIES = [
   { id: "animal", emoji: "🐾", tone: "mint" },
   { id: "plant", emoji: "🌿", tone: "grape" },
   { id: "object", emoji: "📦", tone: "sky" },
-  // One slot for places: a country or a city both count.
+  // One slot for places: a country, a city or a continent all count.
   { id: "country", emoji: "🌍", tone: "accent" },
   { id: "food", emoji: "🍕", tone: "brand" },
   { id: "brand", emoji: "🏷️", tone: "grape" },

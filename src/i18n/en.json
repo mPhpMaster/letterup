@@ -102,7 +102,7 @@
     "animal": "Animal",
     "plant": "Plant",
     "object": "Object",
-    "country": "Country / City",
+    "country": "Country / City / Continent",
     "city": "City",
     "food": "Food / Dish",
     "brand": "Brand",
@@ -137,7 +137,9 @@
       "denied": "Microphone blocked — allow it in your browser to answer by voice.",
       "unavailable": "Voice input isn't available here. Try Chrome, Edge or Safari.",
       "nothing": "Didn't catch that — tap the mic and try again."
-    }
+    },
+    "oneAnswer": "One answer only — just “{answer}” counts",
+    "bareLetter": "A single letter doesn't count — write a word"
   },
   "vote": {
     "title": "Vote on the answers",

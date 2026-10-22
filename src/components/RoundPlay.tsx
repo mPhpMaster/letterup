@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { normalizeAnswer, startsWithLetter } from "@/lib/letters";
+import { firstAnswer, isRealAnswer, normalizeAnswer, startsWithLetter } from "@/lib/letters";
 import { useSound } from "@/lib/sound";
 import { useServerNow } from "@/hooks/useGame";
 import { useSpeechInput, type SpeechError } from "@/hooks/useSpeechInput";
@@ -188,7 +188,7 @@ export function RoundPlay() {
         onSubmit={(e) => {
           e.preventDefault();
           if (locked) return;
-          const empty = round.categories.filter((c) => !(draftsRef.current[c] ?? "").trim());
+          const empty = round.categories.filter((c) => !isRealAnswer(firstAnswer(draftsRef.current[c] ?? "").value));
           if (empty.length > 0) {
             setEmptyWarning(empty);
             return;
@@ -200,7 +200,9 @@ export function RoundPlay() {
           {round.categories.map((category, i) => {
             const value = drafts[category] ?? "";
             const hasValue = value.trim() !== "";
-            const matches = hasValue && startsWithLetter(normalizeAnswer(value), round.letter);
+            const counted = firstAnswer(value);
+            const bare = hasValue && !isRealAnswer(counted.value);
+            const matches = hasValue && !bare && startsWithLetter(normalizeAnswer(counted.value), round.letter);
             const name = t(`categories.${category}`);
             return (
               <label
@@ -211,7 +213,7 @@ export function RoundPlay() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <span className="kicker truncate">{name}</span>
-                    {hasValue && (
+                    {hasValue && !bare && (
                       <span className={`ms-auto shrink-0 text-[11px] font-extrabold ${matches ? "text-mint-deep" : "text-brand"}`}>
                         {matches ? "✓" : t("play.wrongLetter", { letter: round.letter })}
                       </span>
@@ -246,6 +248,17 @@ export function RoundPlay() {
                       }
                     }}
                   />
+                  {bare ? (
+                    <span className="block text-[11px] font-bold text-brand" dir="auto">
+                      {t("play.bareLetter")}
+                    </span>
+                  ) : (
+                    counted.trimmed && (
+                      <span className="block text-[11px] font-bold text-brand" dir="auto">
+                        {t("play.oneAnswer", { answer: counted.value })}
+                      </span>
+                    )
+                  )}
                 </span>
                 {speech.supported && !locked && (
                   <button
