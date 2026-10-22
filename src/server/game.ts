@@ -7,6 +7,7 @@ import { normalizeCategories } from "@/lib/categories";
 import { firstAnswer, isRealAnswer, normalizeAnswer, pickLetter, startsWithLetter, type LetterLocale } from "@/lib/letters";
 import { computeRoundScores } from "@/lib/scoring";
 import { categoryVoteMs, REVIEWED_GRACE_MS, RESULTS_MS } from "@/lib/voteTiming";
+import { verifyRoundAnswers } from "./verify";
 import type { AnswerView, GameOrigin, GameState, GameStatus, PlayerView, RoundView, SessionUser } from "@/lib/types";
 
 /** Unambiguous room codes: no O/0, I/1, etc. */
@@ -81,6 +82,8 @@ interface AnswerRow {
   normalized: string;
   auto_valid: boolean;
   host_verdict: boolean | null;
+  verified: boolean;
+  verified_as: string | null;
   is_valid: boolean | null;
   points: number;
 }
@@ -210,6 +213,7 @@ async function openVoting(round: RoundRow): Promise<void> {
   const db = admin();
   const { error } = await db.rpc("end_round", { p_round_id: round.id });
   if (error) throw new Error(`end_round: ${error.message}`);
+  await verifyRoundAnswers(round.id);
   const advanced = await db.rpc("advance_vote_category", { p_round_id: round.id });
   if (advanced.error) throw new Error(`advance_vote_category: ${advanced.error.message}`);
   const index = typeof advanced.data === "number" ? advanced.data : 0;
@@ -242,7 +246,8 @@ async function votableCount(roundId: string, category: string): Promise<number> 
     .eq("round_id", roundId)
     .eq("category", category)
     .not("normalized", "is", null)
-    .neq("normalized", "");
+    .neq("normalized", "")
+    .eq("verified", false);
   if (error) throw new Error(`votable answers: ${error.message}`);
   return count ?? 0;
 }
@@ -382,6 +387,8 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
             normalized: a.normalized,
             autoValid: a.auto_valid,
             hostVerdict: a.host_verdict,
+            verified: a.verified ?? false,
+            verifiedAs: a.verified_as ?? null,
             isValid: a.is_valid,
             points: a.points,
             approvals: mine.filter((v) => v.approve).length,
@@ -403,7 +410,7 @@ async function buildState(user: SessionUser, gameId: string): Promise<GameState>
       // What that deadline was set from, so the ring on screen drains at the right rate.
       voteWindowMs:
         r.vote_category_index < r.categories.length
-          ? categoryVoteMs(answerRows.filter((a) => a.category === r.categories[r.vote_category_index] && a.normalized).length)
+          ? categoryVoteMs(answerRows.filter((a) => a.category === r.categories[r.vote_category_index] && a.normalized && !a.verified).length)
           : REVIEWED_GRACE_MS,
       startedAt: Date.parse(r.started_at),
       endsAt: Date.parse(r.ends_at),
@@ -895,6 +902,7 @@ export const actions: Record<string, Action> = {
     requireStatus(m, "voting");
     const answer = await votableAnswer(m, body);
     if (answer.player_id === m.me.id) throw new HttpError(400, "You can't vote on your own answer");
+    if (answer.verified) throw new HttpError(400, "This answer was confirmed automatically");
     const approve = triState(body.approve, "approve");
     const db = admin();
     const res =
@@ -1023,6 +1031,7 @@ async function settleRound(core: Core, round: RoundRow): Promise<void> {
       normalized: a.normalized,
       autoValid: a.auto_valid,
       hostVerdict: a.host_verdict,
+      verified: a.verified ?? false,
     })),
     check(votes, "votes").map((v) => ({ answerId: v.answer_id, approve: v.approve })),
     // With only two players nobody can outvote the author, so the single opponent's 👎 decides.

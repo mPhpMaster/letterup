@@ -70,3 +70,11 @@ test("players can vote a wrong-letter answer in (e.g. سليم written as salim)
   );
   assert.equal(computeRoundScores([a], [{ answerId: "a", approve: true }], 3)[0].points, 10);
 });
+
+test("a confirmed answer counts without votes; only the host can overrule it", () => {
+  const a = ans("a", "p1", "country", "peru", { verified: true });
+  const no = { answerId: "a", approve: false };
+  assert.equal(isAnswerValid(a, [no, no, no], 4), true, "thumbs down do not undo a confirmed answer");
+  assert.equal(isAnswerValid({ ...a, hostVerdict: false }, [], 4), false, "host can still rule it out");
+  assert.equal(isAnswerValid(ans("b", "p1", "country", "", { verified: true }), [], 4), false, "blank stays blank");
+});

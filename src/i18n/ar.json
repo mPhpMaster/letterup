@@ -182,7 +182,10 @@
     "legendInvalid": "غير صالحة · 0",
     "wrongLetterVote": "حرف خاطئ · 👍 لقبولها",
     "skipCategory": "تخطَّ هذه الفئة",
-    "lookUp": "ابحث عن صور «{word}»"
+    "lookUp": "ابحث عن صور «{word}»",
+    "verified": "موثّقة",
+    "verifiedHint": "تم التعرّف عليها تلقائيًا — لا حاجة للتصويت",
+    "spelled": "هل تقصد «{word}»؟"
   },
   "results": {
     "title": "نتائج الجولة {number}",

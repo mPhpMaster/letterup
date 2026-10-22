@@ -31,6 +31,10 @@ export interface AnswerView {
   normalized: string;
   autoValid: boolean;
   hostVerdict: boolean | null;
+  /** Confirmed by the game itself (word lists / Wikidata): no vote needed. */
+  verified: boolean;
+  /** The recognised spelling ("palastine" -> "palestine"), when there is one. */
+  verifiedAs: string | null;
   isValid: boolean | null;
   points: number;
   approvals: number;

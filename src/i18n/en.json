@@ -170,7 +170,10 @@
     "legendInvalid": "Invalid · 0",
     "wrongLetterVote": "Wrong letter · 👍 to accept",
     "skipCategory": "Skip this category",
-    "lookUp": "Search images for “{word}”"
+    "lookUp": "Search images for “{word}”",
+    "verified": "Confirmed",
+    "verifiedHint": "Recognised automatically — no vote needed",
+    "spelled": "Did you mean “{word}”?"
   },
   "results": {
     "title": "Round {number} results",

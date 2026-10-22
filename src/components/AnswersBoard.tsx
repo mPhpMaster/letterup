@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { normalizeAnswer } from "@/lib/letters";
 import { computeRoundScores, type AnswerScore } from "@/lib/scoring";
 import { useSound } from "@/lib/sound";
 import type { AnswerView, PlayerView } from "@/lib/types";
@@ -47,6 +48,7 @@ export function AnswersBoard({ mode }: { mode: "vote" | "final" }) {
             normalized: a.normalized,
             autoValid: a.autoValid,
             hostVerdict: a.hostVerdict,
+            verified: a.verified,
           })),
           round.votes,
           state.players.length,
@@ -162,6 +164,12 @@ function AnswerRow({
     );
   };
 
+  // A near miss of a known word: show the spelling, let the vote decide.
+  const suggestion =
+    answer && !answer.verified && answer.verifiedAs && normalizeAnswer(answer.verifiedAs) !== normalizeAnswer(answer.value)
+      ? answer.verifiedAs
+      : null;
+
   const status: Status = !hasValue ? "empty" : !valid ? "rejected" : duplicate ? "duplicate" : "unique";
   const statusLabel = !hasValue
     ? t("vote.noAnswer")
@@ -183,11 +191,21 @@ function AnswerRow({
           <p className="truncate text-[15px] font-extrabold" dir="auto">
             {hasValue ? answer!.value : <span className="text-ink/35">{t("vote.noAnswer")}</span>}
           </p>
+          {suggestion && (
+            <p className="truncate text-[11px] font-bold text-sky" dir="auto">
+              {t("vote.spelled", { word: suggestion })}
+            </p>
+          )}
           <p className="flex min-w-0 items-center gap-1 text-[11px] font-bold text-ink/45">
             <button type="button" className="truncate hover:underline" onClick={() => openProfile(player.userId)}>
               {mine ? `${player.username} (${t("common.you")})` : player.username}
             </button>
             {answer?.hostVerdict != null && <span className="shrink-0 text-grape">· {t("vote.hostRuled")}</span>}
+            {answer?.verified && answer.hostVerdict == null && (
+              <span className="shrink-0 text-mint-deep" title={t("vote.verifiedHint")}>
+                · ✓ {t("vote.verified")}
+              </span>
+            )}
             {/* The badge is hidden on narrow panels (Discord's included); keep the verdict readable there. */}
             {hasValue && status === "rejected" && <span className="truncate text-brand sm:hidden">· {statusLabel}</span>}
           </p>
@@ -212,6 +230,8 @@ function AnswerRow({
 
         {mode === "vote" && answer && hasValue && !mine && (
           <span className="flex items-center gap-1" role="group" aria-label={t("vote.votes")}>
+            {!answer.verified && (
+              <>
             <VoteButton
               pressed={answer.myVote === true}
               label={t("vote.approve")}
@@ -228,6 +248,8 @@ function AnswerRow({
               pressedClass="bg-brand"
               onClick={() => castVote(answer.myVote === false ? null : false)}
             />
+              </>
+            )}
             {isHost && (
               <span className="ms-1 flex items-center gap-1 border-s-2 border-ink/10 ps-1.5">
                 <VerdictButton
