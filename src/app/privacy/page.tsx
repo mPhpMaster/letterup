@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 const en: LegalVersion = {
   title: "Privacy Policy",
-  updated: "Last updated: September 16, 2026",
+  updated: "Last updated: October 22, 2026",
   intro:
     "This policy explains what information “Human, Animal, Plant, Object” (“Letter Up”), a Discord Activity, collects when you play, how it is used, and how long it is kept. We collect only what is needed to run the game.",
   sections: [
@@ -16,7 +16,7 @@ const en: LegalVersion = {
       heading: "Information we collect",
       body: [
         "Discord profile: when you launch the Activity and approve the sign-in, Discord shares your user ID, username or display name, and avatar with us.",
-        "The sign-in also requests Discord's “guilds” permission, but the game never reads or stores your server list. We do not access your email address, messages, friends, or voice.",
+        "That is the only permission the game asks for: we do not request your server list, and we do not access your email address, messages, friends, or voice.",
         "Game data: the Activity session ID, the host's game settings, the answers you type, votes you cast, your scores, and when you were last active (used to show who is online).",
       ],
     },
@@ -75,7 +75,7 @@ const en: LegalVersion = {
 
 const ar: LegalVersion = {
   title: "سياسة الخصوصية",
-  updated: "آخر تحديث: 16 سبتمبر 2026",
+  updated: "آخر تحديث: 22 أكتوبر 2026",
   intro:
     "توضّح هذه السياسة المعلومات التي تجمعها لعبة «إنسان، حيوان، نبات، جماد» (Letter Up)، وهي نشاط داخل ديسكورد، أثناء اللعب، وكيف تُستخدم، ومدة الاحتفاظ بها. نحن لا نجمع إلا ما يلزم لتشغيل اللعبة.",
   sections: [
@@ -83,7 +83,7 @@ const ar: LegalVersion = {
       heading: "المعلومات التي نجمعها",
       body: [
         "ملف ديسكورد: عند تشغيل النشاط والموافقة على تسجيل الدخول، يشارك ديسكورد معنا معرّف المستخدم واسم المستخدم أو الاسم الظاهر والصورة الرمزية.",
-        "يطلب تسجيل الدخول أيضًا صلاحية «guilds» في ديسكورد، لكن اللعبة لا تقرأ قائمة خوادمك ولا تحفظها. ولا نصل إلى بريدك الإلكتروني أو رسائلك أو أصدقائك أو صوتك.",
+        "وهي الصلاحية الوحيدة التي تطلبها اللعبة: لا نطلب قائمة خوادمك، ولا نصل إلى بريدك الإلكتروني أو رسائلك أو أصدقائك أو صوتك.",
         "بيانات اللعب: معرّف جلسة النشاط، وإعدادات اللعبة التي يختارها المضيف، والإجابات التي تكتبها، والأصوات التي تُدلي بها، ونقاطك، ووقت آخر نشاط لك (لإظهار المتصلين).",
       ],
     },

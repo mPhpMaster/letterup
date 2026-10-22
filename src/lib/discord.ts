@@ -58,7 +58,8 @@ export async function bootDiscord(onStep: (step: BootStep) => void): Promise<Dis
     response_type: "code",
     state: "",
     prompt: "none",
-    scope: ["identify", "guilds"],
+    // identify only: the game never reads your server list.
+    scope: ["identify"],
   });
   const auth = await postJson<{ accessToken: string; token: string; user: SessionUser }>("/api/auth/discord", { code });
   await sdk.commands.authenticate({ access_token: auth.accessToken });
