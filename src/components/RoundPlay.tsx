@@ -355,7 +355,17 @@ export function RoundPlay() {
               </>
             )}
             {submitted && phase === "answer" ? (
-              <button type="button" className="btn btn-mint flex-1 px-6 text-lg sm:flex-none" onClick={unsubmit}>
+              // Own key, and no default action: reopening flips this spot to the submit button
+              // mid-click, and the browser would otherwise treat the same tap as pressing Done.
+              <button
+                key="reopen"
+                type="button"
+                className="btn btn-mint flex-1 px-6 text-lg sm:flex-none"
+                onClick={(e) => {
+                  e.preventDefault();
+                  unsubmit();
+                }}
+              >
                 <Icon name="checkCircle" size={20} />
                 <span className="flex flex-col items-start leading-tight">
                   {t("play.submitted")}
@@ -363,7 +373,7 @@ export function RoundPlay() {
                 </span>
               </button>
             ) : (
-              <button type="submit" className="btn btn-brand flex-1 px-8 text-lg sm:flex-none" disabled={locked}>
+              <button key="done" type="submit" className="btn btn-brand flex-1 px-8 text-lg sm:flex-none" disabled={locked}>
                 <Icon name="checkCircle" size={20} />
                 {submitted ? t("play.submitted") : t("play.done")}
               </button>
